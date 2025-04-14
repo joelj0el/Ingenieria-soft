@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}Inicio - Mi Aplicación{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="text-center">Bienvenido a Mi Aplicación</h1>
+            </div>
+            <div class="card-body">
+                {% if user.is_authenticated %}
+                    <h2>Hola, {{ user.first_name }} {{ user.last_name }}</h2>
+                    <p class="lead">Has iniciado sesión correctamente.</p>
+                    <p>Esta es la página principal de tu aplicación. Aquí puedes mostrar el contenido para usuarios autenticados.</p>
+                {% else %}
+                    <p class="lead">Para acceder a todas las funcionalidades, por favor inicia sesión o regístrate.</p>
+                    <div class="text-center mt-4">
+                        <a href="{% url 'login' %}" class="btn btn-primary me-2">Iniciar sesión</a>
+                        <a href="{% url 'registro' %}" class="btn btn-success">Registrarse</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
