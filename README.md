@@ -1,3 +1,4 @@
+
 BASE DE DATOS:
 
 -- Crear la base de datos
@@ -78,3 +79,8 @@ python manage.py createsuperuser
 
 
 python manage.py runserver
+
+Este es el proyecto inicial, pero no estamos usndo una api, el endpoint de este proyecto esta mediante rutas, en todo caso para usar los json que nos dijo el docente, necesitamos cambiar algunos archivos, 
+para poder usar DjangoRest que es algo mas que debemos aprender, y esto si usa los edpoints para el conectar con la BD y el backend.
+
+El proyecto por el momento solo tiene el login. 
