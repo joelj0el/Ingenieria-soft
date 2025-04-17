@@ -57,3 +57,24 @@ BEGIN
     SELECT SCOPE_IDENTITY() AS user_id;
 END;
 GO
+
+
+
+
+AQUI ESTAN LOS COMANDOS NECESARIOS PARA PODER HACER CORRER EL PROYECTO.
+
+python -m venv venv
+venv\Scripts\activate
+
+pip install django
+pip install djangorestframework
+pip install django-mssql-backend
+pip install pyodbc
+
+python manage.py migrate
+
+python manage.py createsuperuser
+
+
+
+python manage.py runserver
