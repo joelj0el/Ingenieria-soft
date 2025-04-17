@@ -3,58 +3,102 @@
 {% block title %}Iniciar Sesión{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h2 class="text-center">Iniciar Sesión</h2>
-            </div>
-            <div class="card-body">
-                <form method="post" novalidate>
-                    {% csrf_token %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow border-0 rounded-lg">
+                <div class="card-body p-4">
+                    <h2 class="text-center mb-4 fw-light">Iniciar Sesión</h2>
                     
-                    <div class="mb-3">
-                        <label for="{{ form.username.id_for_label }}" class="form-label">Usuario:</label>
-                        {{ form.username }}
-                        {% if form.username.errors %}
-                            <div class="text-danger">
-                                {% for error in form.username.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.password.id_for_label }}" class="form-label">Contraseña:</label>
-                        {{ form.password }}
-                        {% if form.password.errors %}
-                            <div class="text-danger">
-                                {% for error in form.password.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {% for error in form.non_field_errors %}
-                                {{ error }}
-                            {% endfor %}
+                    <form method="post" novalidate class="needs-validation">
+                        {% csrf_token %}
+                        
+                        <div class="form-floating mb-3">
+                            {{ form.username }}
+                            <label for="{{ form.username.id_for_label }}">Usuario</label>
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.username.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
-                    {% endif %}
-                    
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
-                    </div>
-                </form>
-                
-                <div class="text-center mt-3">
-                    <p>¿No tienes cuenta? <a href="{% url 'registro' %}">Regístrate aquí</a></p>
+                        
+                        <div class="form-floating mb-4">
+                            {{ form.password }}
+                            <label for="{{ form.password.id_for_label }}">Contraseña</label>
+                            {% if form.password.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.password.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger py-2">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2 mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg">Ingresar</button>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <p class="text-muted">¿No tienes cuenta? <a href="{% url 'registro' %}" class="text-decoration-none">Regístrate aquí</a></p>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Agregar JavaScript para API REST -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Opción para usar la API REST
+        const form = document.querySelector('form');
+        
+        form.addEventListener('submit', function(e) {
+            // Si quieres usar la API en lugar del formulario tradicional
+            // descomenta estas líneas y comenta el form.submit()
+            
+            /* 
+            e.preventDefault();
+            
+            const username = document.getElementById('{{ form.username.id_for_label }}').value;
+            const password = document.getElementById('{{ form.password.id_for_label }}').value;
+            
+            fetch('/usuarios/api/login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    window.location.href = "{% url 'home' %}";
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+            */
+        });
+    });
+</script>
 {% endblock %}

@@ -13,6 +13,13 @@ class FormularioRegistro(UserCreationForm):
         model = User
         fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2')
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Aplicar clases de Bootstrap a los campos
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
+            field.widget.attrs['placeholder'] = field.label
+    
     def save(self, commit=True):
         user = super(FormularioRegistro, self).save(commit=False)
         user.email = self.cleaned_data['email']
@@ -24,8 +31,16 @@ class FormularioRegistro(UserCreationForm):
 
 class FormularioLogin(AuthenticationForm):
     username = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Usuario'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'id': 'floatingInput',
+            'placeholder': ' '  # Placeholder vacío para form-floating
+        })
     )
     password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Contraseña'})
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'id': 'floatingPassword',
+            'placeholder': ' '  # Placeholder vacío para form-floating
+        })
     )
