@@ -73,6 +73,51 @@
                                 {% endfor %}
                             </div>
                         {% endif %}
+                        <div class="form-text text-muted">Debe ser un correo institucional (@uab.edu.bo)</div>
+                    </div>
+                    
+                    <!-- Selector de Rol -->
+                    <div class="mb-3">
+                        <label for="{{ form.rol.id_for_label }}" class="form-label">Rol en la universidad:</label>
+                        <select name="{{ form.rol.name }}" 
+                               id="{{ form.rol.id_for_label }}" 
+                               class="form-control {% if form.rol.errors %}is-invalid{% endif %}"
+                               onchange="toggleCarreraField()">
+                            {% for value, text in form.rol.field.choices %}
+                                <option value="{{ value }}" {% if form.rol.value == value %}selected{% endif %}>
+                                    {{ text }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.rol.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.rol.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Selector de Carrera (visible solo para estudiantes) -->
+                    <div class="mb-3" id="carrera_container">
+                        <label for="{{ form.carrera.id_for_label }}" class="form-label">Carrera:</label>
+                        <select name="{{ form.carrera.name }}" 
+                               id="{{ form.carrera.id_for_label }}" 
+                               class="form-control {% if form.carrera.errors %}is-invalid{% endif %}">
+                            <option value="">Seleccione una carrera</option>
+                            {% for carrera in form.carrera.field.queryset %}
+                                <option value="{{ carrera.id }}" {% if form.carrera.value == carrera.id %}selected{% endif %}>
+                                    {{ carrera.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.carrera.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.carrera.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                     
                     <div class="mb-3">
@@ -131,4 +176,23 @@
         </div>
     </div>
 </div>
+
+<script>
+    function toggleCarreraField() {
+        const rolSelect = document.getElementById('{{ form.rol.id_for_label }}');
+        const carreraContainer = document.getElementById('carrera_container');
+        
+        if (rolSelect.value === 'administrativo') {
+            carreraContainer.style.display = 'none';
+            document.getElementById('{{ form.carrera.id_for_label }}').value = '';
+        } else {
+            carreraContainer.style.display = 'block';
+        }
+    }
+    
+    // Ejecutar al cargar la página
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleCarreraField();
+    });
+</script>
 {% endblock %}
