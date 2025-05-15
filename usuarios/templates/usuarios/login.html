@@ -1,15 +1,17 @@
 {% extends 'base.html' %}
 
-{% block title %}Iniciar Sesión{% endblock %}
+{% block title %}Iniciar Sesión - Soccer Game{% endblock %}
 
-{% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="card shadow border-0 rounded-lg">
-                <div class="card-body p-4">
-                    <h2 class="text-center mb-4 fw-light">Iniciar Sesión</h2>
-                    
+{% block hero %}
+<section class="hero-section">
+    <div class="green-overlay"></div>
+    <div class="container hero-container">
+        <div class="row">
+            <div class="col-md-6 hero-content">
+                <h1 class="hero-title">Iniciar Sesión</h1>
+                <p class="hero-text mb-4">Accede a tu cuenta para disfrutar de todas las funcionalidades disponibles.</p>
+                
+                <div class="login-form-container">
                     <form method="post" novalidate class="needs-validation">
                         {% csrf_token %}
                         
@@ -45,19 +47,23 @@
                             </div>
                         {% endif %}
                         
-                        <div class="d-grid gap-2 mb-3">
-                            <button type="submit" class="btn btn-primary btn-lg">Ingresar</button>
+                        <div class="mb-3">
+                            <button type="submit" class="btn-hero">Ingresar</button>
                         </div>
                         
                         <div class="text-center mt-4">
-                            <p class="text-muted">¿No tienes cuenta? <a href="{% url 'registro' %}" class="text-decoration-none">Regístrate aquí</a></p>
+                            <p class="text-white">¿No tienes cuenta? <a href="{% url 'registro' %}" class="text-white text-decoration-none"><u>Regístrate aquí</u></a></p>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-</div>
+    
+    <!-- La imagen del jugador de fútbol -->
+    <img src="/static/images/R.jpg" alt="Jugador de fútbol" class="player-image">
+</section>
+{% endblock %}
 
 <!-- Agregar JavaScript para API REST -->
 <script>
@@ -101,4 +107,3 @@
         });
     });
 </script>
-{% endblock %}

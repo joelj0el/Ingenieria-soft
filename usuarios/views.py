@@ -185,7 +185,7 @@ class PostAPIView(APIView):
     
     def get(self, request, post_id=None):
         """Obtener una publicación específica o todas las publicaciones"""
-        if post_id:
+        if (post_id):
             try:
                 post = Post.objects.get(id=post_id)
                 serializer = PostSerializer(post)
@@ -296,3 +296,315 @@ class CarreraAPIView(APIView):
         from .serializers import CarreraSerializer
         serializer = CarreraSerializer(carreras, many=True)
         return Response(serializer.data)
+
+# Vistas para el panel de administración
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
+from django.db.models import Q
+from django.contrib.auth import authenticate
+import json
+
+class AdminPanelView(View):
+    @method_decorator(login_required)
+    def get(self, request):
+        # Verificar si el usuario es administrativo
+        try:
+            perfil = Perfil.objects.get(usuario=request.user)
+            if perfil.rol != 'administrativo' or perfil.estado_verificacion != 'aprobado':
+                return HttpResponseForbidden("Acceso denegado")
+        except Perfil.DoesNotExist:
+            return HttpResponseForbidden("Acceso denegado")
+            
+        return render(request, 'admin_panel.html')
+
+class AdminUserListView(View):
+    @method_decorator(login_required)
+    def get(self, request):
+        # Verificar si el usuario es administrativo
+        try:
+            perfil = Perfil.objects.get(usuario=request.user)
+            if perfil.rol != 'administrativo' or perfil.estado_verificacion != 'aprobado':
+                return JsonResponse({'error': 'Acceso denegado'}, status=403)
+        except Perfil.DoesNotExist:
+            return JsonResponse({'error': 'Acceso denegado'}, status=403)
+            
+        # Obtener todos los usuarios con sus perfiles
+        usuarios = User.objects.all().exclude(is_superuser=True)
+        resultado = []
+        
+        for usuario in usuarios:
+            try:
+                perfil = Perfil.objects.get(usuario=usuario)
+                carrera_nombre = perfil.carrera.nombre if perfil.carrera else None
+                
+                resultado.append({
+                    'id': usuario.id,
+                    'username': usuario.username,
+                    'first_name': usuario.first_name,
+                    'last_name': usuario.last_name,
+                    'email': usuario.email,
+                    'rol': perfil.rol,
+                    'carrera_id': perfil.carrera.id if perfil.carrera else None,
+                    'carrera_nombre': carrera_nombre,
+                    'estado_verificacion': perfil.estado_verificacion
+                })
+            except Perfil.DoesNotExist:
+                # Usuario sin perfil
+                resultado.append({
+                    'id': usuario.id,
+                    'username': usuario.username,
+                    'first_name': usuario.first_name,
+                    'last_name': usuario.last_name,
+                    'email': usuario.email,
+                    'rol': 'N/A',
+                    'carrera_id': None,
+                    'carrera_nombre': None,
+                    'estado_verificacion': 'N/A'
+                })
+        
+        return JsonResponse(resultado, safe=False)
+
+class AdminUserSearchView(View):
+    @method_decorator(login_required)
+    def get(self, request):
+        # Verificar si el usuario es administrativo
+        try:
+            perfil = Perfil.objects.get(usuario=request.user)
+            if perfil.rol != 'administrativo' or perfil.estado_verificacion != 'aprobado':
+                return JsonResponse({'error': 'Acceso denegado'}, status=403)
+        except Perfil.DoesNotExist:
+            return JsonResponse({'error': 'Acceso denegado'}, status=403)
+            
+        # Obtener el término de búsqueda
+        query = request.GET.get('q', '').strip()
+        
+        if not query:
+            return JsonResponse([], safe=False)
+              # Buscar usuarios por nombre, apellido o email
+        usuarios = User.objects.filter(
+            Q(username__icontains=query) | 
+            Q(first_name__icontains=query) | 
+            Q(last_name__icontains=query) | 
+            Q(email__icontains=query)
+        ).exclude(is_superuser=True)
+        
+        resultado = []
+        
+        for usuario in usuarios:
+            try:
+                perfil = Perfil.objects.get(usuario=usuario)
+                carrera_nombre = perfil.carrera.nombre if perfil.carrera else None
+                
+                resultado.append({
+                    'id': usuario.id,
+                    'username': usuario.username,
+                    'first_name': usuario.first_name,
+                    'last_name': usuario.last_name,
+                    'email': usuario.email,
+                    'rol': perfil.rol,
+                    'carrera_id': perfil.carrera.id if perfil.carrera else None,
+                    'carrera_nombre': carrera_nombre,
+                    'estado_verificacion': perfil.estado_verificacion
+                })
+            except Perfil.DoesNotExist:
+                # Usuario sin perfil
+                resultado.append({
+                    'id': usuario.id,
+                    'username': usuario.username,
+                    'first_name': usuario.first_name,
+                    'last_name': usuario.last_name,
+                    'email': usuario.email,
+                    'rol': 'N/A',
+                    'carrera_id': None,
+                    'carrera_nombre': None,
+                    'estado_verificacion': 'N/A'
+                })
+        
+        return JsonResponse(resultado, safe=False)
+
+class AdminUserDetailView(View):
+    @method_decorator(login_required)
+    def get(self, request, user_id):
+        # Verificar si el usuario es administrativo
+        try:
+            perfil = Perfil.objects.get(usuario=request.user)
+            if perfil.rol != 'administrativo' or perfil.estado_verificacion != 'aprobado':
+                return JsonResponse({'error': 'Acceso denegado'}, status=403)
+        except Perfil.DoesNotExist:
+            return JsonResponse({'error': 'Acceso denegado'}, status=403)
+            
+        # Obtener el usuario por ID
+        try:
+            usuario = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
+            
+        try:
+            perfil = Perfil.objects.get(usuario=usuario)
+            carrera_nombre = perfil.carrera.nombre if perfil.carrera else None
+            
+            resultado = {
+                'id': usuario.id,
+                'username': usuario.username,
+                'first_name': usuario.first_name,
+                'last_name': usuario.last_name,
+                'email': usuario.email,
+                'rol': perfil.rol,
+                'carrera_id': perfil.carrera.id if perfil.carrera else None,
+                'carrera_nombre': carrera_nombre,
+                'estado_verificacion': perfil.estado_verificacion
+            }
+        except Perfil.DoesNotExist:
+            # Usuario sin perfil
+            resultado = {
+                'id': usuario.id,
+                'username': usuario.username,
+                'first_name': usuario.first_name,
+                'last_name': usuario.last_name,
+                'email': usuario.email,
+                'rol': 'N/A',
+                'carrera_id': None,
+                'carrera_nombre': None,
+                'estado_verificacion': 'N/A'
+            }
+        
+        return JsonResponse(resultado)
+        
+    @method_decorator(login_required)
+    def put(self, request, user_id):
+        # Verificar si el usuario es administrativo
+        try:
+            perfil_admin = Perfil.objects.get(usuario=request.user)
+            if perfil_admin.rol != 'administrativo' or perfil_admin.estado_verificacion != 'aprobado':
+                return JsonResponse({'error': 'Acceso denegado'}, status=403)
+        except Perfil.DoesNotExist:
+            return JsonResponse({'error': 'Acceso denegado'}, status=403)
+            
+        # Obtener el usuario a editar
+        try:
+            usuario = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
+            
+        # Obtener datos del cuerpo de la solicitud
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest('Formato de datos inválido')
+            
+        # Validar que el correo termine con @uab.edu.bo
+        email = data.get('email', '')
+        if email and not email.endswith('@uab.edu.bo'):
+            return JsonResponse({'error': 'El correo debe terminar con @uab.edu.bo'}, status=400)
+            
+        # Actualizar datos del usuario
+        usuario.first_name = data.get('first_name', usuario.first_name)
+        usuario.last_name = data.get('last_name', usuario.last_name)
+        usuario.email = email if email else usuario.email
+        
+        # Validar email único
+        if User.objects.filter(email=email).exclude(id=usuario.id).exists():
+            return JsonResponse({'error': 'El correo ya está en uso'}, status=400)
+            
+        # Guardar usuario
+        usuario.save()
+        
+        # Actualizar perfil
+        rol = data.get('rol')
+        try:
+            perfil = Perfil.objects.get(usuario=usuario)
+            
+            # Guardar rol anterior para verificaciones
+            rol_anterior = perfil.rol
+            
+            if rol:
+                perfil.rol = rol
+                
+            # Para estudiantes, se requiere carrera
+            if rol == 'estudiante':
+                carrera_id = data.get('carrera_id')
+                if not carrera_id:
+                    return JsonResponse({'error': 'Se requiere especificar una carrera para el estudiante'}, status=400)
+                try:
+                    carrera = Carrera.objects.get(id=carrera_id)
+                    perfil.carrera = carrera
+                except Carrera.DoesNotExist:
+                    return JsonResponse({'error': 'Carrera no encontrada'}, status=404)
+            
+            # Si cambia de estudiante a administrativo, ponemos en estado pendiente
+            if rol_anterior == 'estudiante' and rol == 'administrativo':
+                perfil.estado_verificacion = 'pendiente'
+                perfil.carrera = None
+            
+            perfil.save()
+                
+        except Perfil.DoesNotExist:
+            # Si no tiene perfil, lo creamos
+            perfil_data = {
+                'usuario': usuario,
+                'rol': rol if rol else 'estudiante',
+                'estado_verificacion': 'pendiente' if rol == 'administrativo' else 'aprobado'
+            }
+            
+            if rol == 'estudiante':
+                carrera_id = data.get('carrera_id')
+                if not carrera_id:
+                    return JsonResponse({'error': 'Se requiere especificar una carrera para el estudiante'}, status=400)
+                try:
+                    carrera = Carrera.objects.get(id=carrera_id)
+                    perfil_data['carrera'] = carrera
+                except Carrera.DoesNotExist:
+                    return JsonResponse({'error': 'Carrera no encontrada'}, status=404)
+                
+            Perfil.objects.create(**perfil_data)
+        
+        return JsonResponse({'success': True, 'message': 'Usuario actualizado correctamente'})
+        
+    @method_decorator(login_required)
+    def delete(self, request, user_id):
+        # Verificar si el usuario es administrativo
+        try:
+            perfil_admin = Perfil.objects.get(usuario=request.user)
+            if perfil_admin.rol != 'administrativo' or perfil_admin.estado_verificacion != 'aprobado':
+                return JsonResponse({'error': 'Acceso denegado'}, status=403)
+        except Perfil.DoesNotExist:
+            return JsonResponse({'error': 'Acceso denegado'}, status=403)
+            
+        # Obtener datos del cuerpo de la solicitud
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest('Formato de datos inválido')
+            
+        # Verificar la contraseña del administrador
+        admin_password = data.get('admin_password', '')
+        if not authenticate(username=request.user.username, password=admin_password):
+            return JsonResponse({'error': 'Contraseña incorrecta'}, status=401)
+        
+        # Obtener el usuario a eliminar
+        try:
+            usuario = User.objects.get(id=user_id)
+            
+            # No permitir eliminar al propio administrador
+            if usuario == request.user:
+                return JsonResponse({'error': 'No puedes eliminar tu propio usuario'}, status=400)
+                
+            # No permitir eliminar superusuarios
+            if usuario.is_superuser:
+                return JsonResponse({'error': 'No se pueden eliminar usuarios superadmin'}, status=403)
+                
+            # Eliminar el perfil primero (si existe)
+            try:
+                perfil = Perfil.objects.get(usuario=usuario)
+                perfil.delete()
+            except Perfil.DoesNotExist:
+                pass  # No hay problema si no existe el perfil
+                
+            # Eliminar el usuario
+            usuario.delete()
+            
+            return JsonResponse({'success': True, 'message': 'Usuario eliminado correctamente'})
+            
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'Usuario no encontrado'}, status=404)

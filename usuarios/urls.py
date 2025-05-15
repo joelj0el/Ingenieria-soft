@@ -29,4 +29,12 @@ urlpatterns = [
     
     # URL para obtener carreras
     path('api/carreras/', views.CarreraAPIView.as_view(), name='api_carreras'),
+    
+    # URLs para el panel de administración
+    path('admin/', views.AdminPanelView.as_view(), name='admin_panel'),
+    path('admin/usuarios/listar/', views.AdminUserListView.as_view(), name='admin_user_list'),
+    path('admin/usuarios/buscar/', views.AdminUserSearchView.as_view(), name='admin_user_search'),
+    path('admin/usuarios/<int:user_id>/', views.AdminUserDetailView.as_view(), name='admin_user_detail'),
+    path('admin/usuarios/<int:user_id>/editar/', views.AdminUserDetailView.as_view(), name='admin_user_edit'),
+    path('admin/usuarios/<int:user_id>/eliminar/', views.AdminUserDetailView.as_view(), name='admin_user_delete'),
 ]

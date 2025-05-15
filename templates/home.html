@@ -1,28 +1,53 @@
 {% extends 'base.html' %}
 
-{% block title %}Inicio - Mi Aplicación{% endblock %}
+{% block title %}OLIMPAZ{% endblock %}
+
+{% block hero %}
+<section class="hero-section">
+    <div class="green-overlay"></div>
+    <div class="container hero-container">
+        <div class="row">
+            <div class="col-lg-6 hero-content">
+                <h1 class="hero-title">Juegos Olimpicos de Paz </h1>
+                <h2 class="hero-subtitle">OLIMPAZ</h2>
+                <p class="hero-text">
+                    Tus habilidades deportivas al Límite.
+                </p>                <div class="hero-buttons">
+                    {% if not user.is_authenticated %}
+                    <a href="{% url 'login' %}" class="btn-hero">Iniciar sesión</a>
+                    {% endif %}
+                    <a href="#" class="btn-hero">Leer más</a>
+                </div>
+                
+                <form class="search-box">
+                    <input type="text" class="search-input" placeholder="Buscar...">
+                    <button type="submit" class="search-button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- La imagen del jugador de fútbol -->
+    <img src="/static/images/R.jpg" alt="Jugador de fútbol" class="player-image">
+</section>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
+{% if user.is_authenticated %}
+<div class="row justify-content-center mt-5">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h1 class="text-center">Bienvenido a Mi Aplicación</h1>
+                <h2>Bienvenido, {{ user.first_name }} {{ user.last_name }}</h2>
             </div>
             <div class="card-body">
-                {% if user.is_authenticated %}
-                    <h2>Hola, {{ user.first_name }} {{ user.last_name }}</h2>
-                    <p class="lead">Has iniciado sesión correctamente.</p>
-                    <p>Esta es la página principal de tu aplicación. Aquí puedes mostrar el contenido para usuarios autenticados.</p>
-                {% else %}
-                    <p class="lead">Para acceder a todas las funcionalidades, por favor inicia sesión o regístrate.</p>
-                    <div class="text-center mt-4">
-                        <a href="{% url 'login' %}" class="btn btn-primary me-2">Iniciar sesión</a>
-                        <a href="{% url 'registro' %}" class="btn btn-success">Registrarse</a>
-                    </div>
-                {% endif %}
+                <p class="lead">Has iniciado sesión correctamente.</p>
+                <p>Desde aquí puedes acceder a todas las funcionalidades de la plataforma.</p>
             </div>
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}

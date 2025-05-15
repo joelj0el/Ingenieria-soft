@@ -1,0 +1,633 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Administración - UAB{% endblock %}
+
+{% block content %}
+<div class="admin-panel">
+    {% csrf_token %}
+    <div class="admin-header">
+        <h1 class="admin-title">Panel de Administración</h1>
+        <div class="admin-actions">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Buscar por nombre, email o apellido..." class="form-control">
+                <button id="searchBtn" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="tabs-container mt-4">
+        <ul class="nav nav-tabs" id="adminTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-content" type="button" role="tab" aria-controls="users-content" aria-selected="true">
+                    <i class="fas fa-users"></i> Usuarios
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-content" type="button" role="tab" aria-controls="pending-content" aria-selected="false">
+                    <i class="fas fa-clock"></i> Pendientes de Aprobación
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content mt-3" id="adminTabsContent">
+            <!-- Tab Usuarios -->
+            <div class="tab-pane fade show active" id="users-content" role="tabpanel" aria-labelledby="users-tab">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Apellido</th>
+                                <th>Email</th>
+                                <th>Rol</th>
+                                <th>Carrera</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable">
+                            <!-- Los datos de usuarios se cargarán aquí dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="usersMessage" class="text-center py-4"></div>
+            </div>
+
+            <!-- Tab Pendientes -->
+            <div class="tab-pane fade" id="pending-content" role="tabpanel" aria-labelledby="pending-tab">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Apellido</th>
+                                <th>Email</th>
+                                <th>Teléfono</th>
+                                <th>Fecha registro</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingTable">
+                            <!-- Los datos de usuarios pendientes se cargarán aquí -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="pendingMessage" class="text-center py-4"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar usuario -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editUserModalLabel">Editar Usuario</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId" name="userId">
+                    
+                    <div class="mb-3">
+                        <label for="editFirstName" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="editFirstName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editLastName" class="form-label">Apellido</label>
+                        <input type="text" class="form-control" id="editLastName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="editEmail" required>
+                        <small class="form-text text-muted">Debe terminar con @uab.edu.bo</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editRol" class="form-label">Rol</label>
+                        <select class="form-select" id="editRol" required>
+                            <option value="estudiante">Estudiante</option>
+                            <option value="administrativo">Administrativo</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="editCarreraContainer">
+                        <label for="editCarrera" class="form-label">Carrera</label>
+                        <select class="form-select" id="editCarrera">
+                            <!-- Las opciones se cargarán dinámicamente -->
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="saveUserBtn">Guardar cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para eliminar usuario -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteUserModalLabel">Confirmar eliminación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro que deseas eliminar al usuario <span id="deleteUserName" class="fw-bold"></span>?</p>
+                <p class="text-danger">Esta acción es irreversible.</p>
+                
+                <div class="mt-4">
+                    <label for="adminPassword" class="form-label">Ingresa tu contraseña de administrador para confirmar:</label>
+                    <input type="password" class="form-control" id="adminPassword" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Eliminar usuario</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para el panel de administración -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Cargar carreras para el formulario de edición
+    loadCarreras();
+    
+    // Cargar usuarios inicialmente
+    loadUsers();
+    
+    // Cargar solicitudes pendientes
+    loadPendingUsers();
+    
+    // Configurar evento para la búsqueda
+    document.getElementById('searchBtn').addEventListener('click', searchUsers);
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchUsers();
+        }
+    });
+    
+    // Mostrar/ocultar campo de carrera según el rol seleccionado
+    document.getElementById('editRol').addEventListener('change', toggleCarreraField);
+});
+
+// Función para cargar las carreras disponibles
+function loadCarreras() {
+    fetch('/usuarios/api/carreras/')
+        .then(response => response.json())
+        .then(data => {
+            const carreraSelect = document.getElementById('editCarrera');
+            carreraSelect.innerHTML = '';
+            
+            data.forEach(carrera => {
+                const option = document.createElement('option');
+                option.value = carrera.id;
+                option.textContent = carrera.nombre;
+                carreraSelect.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Error cargando carreras:', error));
+}
+
+// Función para cargar la lista de usuarios
+function loadUsers() {
+    const tableBody = document.getElementById('usersTable');
+    const messageDiv = document.getElementById('usersMessage');
+    
+    tableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></td></tr>';
+    messageDiv.innerHTML = '';
+      // Obtener token CSRF para las solicitudes POST
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    
+    fetch('/usuarios/admin/usuarios/listar/')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la solicitud: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            tableBody.innerHTML = '';
+            
+            if (data.length === 0) {
+                messageDiv.innerHTML = '<div class="alert alert-info">No se encontraron usuarios.</div>';
+                return;
+            }
+            
+            data.forEach(user => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${user.first_name}</td>
+                    <td>${user.last_name}</td>
+                    <td>${user.email}</td>
+                    <td>${user.rol === 'estudiante' ? 'Estudiante' : 'Administrativo'}</td>
+                    <td>${user.carrera_nombre || 'N/A'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary edit-user" data-user-id="${user.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-user" data-user-id="${user.id}" data-user-name="${user.first_name} ${user.last_name}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Configurar eventos para botones de editar y eliminar
+            setupEditButtons();
+            setupDeleteButtons();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            messageDiv.innerHTML = `<div class="alert alert-danger">Error cargando usuarios: ${error.message}</div>`;
+        });
+}
+
+// Función para cargar usuarios pendientes de aprobación
+function loadPendingUsers() {
+    const tableBody = document.getElementById('pendingTable');
+    const messageDiv = document.getElementById('pendingMessage');
+    
+    tableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></td></tr>';
+    messageDiv.innerHTML = '';
+    
+    fetch('/usuarios/api/administrativos/')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la solicitud');
+            }
+            return response.json();
+        })
+        .then(data => {
+            tableBody.innerHTML = '';
+            
+            if (data.length === 0) {
+                messageDiv.innerHTML = '<div class="alert alert-info">No hay solicitudes pendientes de aprobación.</div>';
+                return;
+            }
+            
+            data.forEach(admin => {
+                const user = admin.usuario;
+                const row = document.createElement('tr');
+                
+                // Formatear fecha
+                const fechaRegistro = new Date(admin.fecha_registro).toLocaleDateString('es-ES');
+                
+                row.innerHTML = `
+                    <td>${user.first_name}</td>
+                    <td>${user.last_name}</td>
+                    <td>${user.email}</td>
+                    <td>${admin.telefono || 'No especificado'}</td>
+                    <td>${fechaRegistro}</td>
+                    <td>
+                        <button class="btn btn-sm btn-success approve-user" data-profile-id="${admin.id}">
+                            <i class="fas fa-check"></i> Aprobar
+                        </button>
+                        <button class="btn btn-sm btn-danger reject-user" data-profile-id="${admin.id}">
+                            <i class="fas fa-times"></i> Rechazar
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Configurar eventos para botones de aprobar y rechazar
+            setupApprovalButtons();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            messageDiv.innerHTML = `<div class="alert alert-danger">Error cargando solicitudes: ${error.message}</div>`;
+        });
+}
+
+// Función para buscar usuarios
+function searchUsers() {
+    const searchTerm = document.getElementById('searchInput').value.trim();
+    const tableBody = document.getElementById('usersTable');
+    const messageDiv = document.getElementById('usersMessage');
+    
+    if (searchTerm === '') {
+        loadUsers();
+        return;
+    }
+    
+    tableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Buscando...</span></div></td></tr>';
+    messageDiv.innerHTML = '';
+    
+    console.log('Buscando usuarios con término:', searchTerm);
+    fetch(`/usuarios/admin/usuarios/buscar/?q=${encodeURIComponent(searchTerm)}`)
+        .then(response => {
+            console.log('Respuesta de búsqueda:', response.status);
+            if (!response.ok) {
+                throw new Error('Error en la búsqueda: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            tableBody.innerHTML = '';
+            
+            if (data.length === 0) {
+                messageDiv.innerHTML = `<div class="alert alert-info">No se encontraron resultados para "${searchTerm}".</div>`;
+                return;
+            }
+            
+            data.forEach(user => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${user.first_name}</td>
+                    <td>${user.last_name}</td>
+                    <td>${user.email}</td>
+                    <td>${user.rol === 'estudiante' ? 'Estudiante' : 'Administrativo'}</td>
+                    <td>${user.carrera_nombre || 'N/A'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary edit-user" data-user-id="${user.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-user" data-user-id="${user.id}" data-user-name="${user.first_name} ${user.last_name}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Configurar eventos para botones de editar y eliminar
+            setupEditButtons();
+            setupDeleteButtons();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            messageDiv.innerHTML = `<div class="alert alert-danger">Error en la búsqueda: ${error.message}</div>`;
+        });
+}
+
+// Configurar eventos para botones de edición
+function setupEditButtons() {
+    document.querySelectorAll('.edit-user').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            openEditModal(userId);
+        });
+    });
+}
+
+// Configurar eventos para botones de eliminación
+function setupDeleteButtons() {
+    document.querySelectorAll('.delete-user').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const userName = this.getAttribute('data-user-name');
+            openDeleteModal(userId, userName);
+        });
+    });
+}
+
+// Configurar eventos para botones de aprobación/rechazo
+function setupApprovalButtons() {
+    document.querySelectorAll('.approve-user').forEach(button => {
+        button.addEventListener('click', function() {
+            const profileId = this.getAttribute('data-profile-id');
+            approveUser(profileId);
+        });
+    });
+    
+    document.querySelectorAll('.reject-user').forEach(button => {
+        button.addEventListener('click', function() {
+            const profileId = this.getAttribute('data-profile-id');
+            rejectUser(profileId);
+        });
+    });
+}
+
+// Función para aprobar usuario
+function approveUser(profileId) {
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    
+    fetch(`/usuarios/api/administrativos/${profileId}/`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({ accion: 'aprobar' })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error aprobando el usuario');
+        }
+        return response.json();
+    })
+    .then(data => {
+        alert('Usuario aprobado correctamente');
+        loadPendingUsers(); // Recargar la lista de pendientes
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(`Error: ${error.message}`);
+    });
+}
+
+// Función para rechazar usuario
+function rejectUser(profileId) {
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    
+    fetch(`/usuarios/api/administrativos/${profileId}/`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({ accion: 'rechazar' })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error rechazando el usuario');
+        }
+        return response.json();
+    })
+    .then(data => {
+        alert('Usuario rechazado correctamente');
+        loadPendingUsers(); // Recargar la lista de pendientes
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(`Error: ${error.message}`);
+    });
+}
+
+// Función para abrir el modal de edición
+function openEditModal(userId) {
+    // Obtener información del usuario
+    fetch(`/usuarios/admin/usuarios/${userId}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error obteniendo datos del usuario');
+            }
+            return response.json();
+        })
+        .then(user => {
+            // Llenar el formulario con los datos del usuario
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editFirstName').value = user.first_name;
+            document.getElementById('editLastName').value = user.last_name;
+            document.getElementById('editEmail').value = user.email;
+            document.getElementById('editRol').value = user.rol;
+            
+            if (user.carrera_id) {
+                document.getElementById('editCarrera').value = user.carrera_id;
+            }
+            
+            toggleCarreraField(); // Mostrar/ocultar campo carrera según el rol
+            
+            // Mostrar el modal
+            const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(`Error: ${error.message}`);
+        });
+    
+    // Configurar evento para el botón de guardar
+    document.getElementById('saveUserBtn').onclick = function() {
+        saveUserChanges();
+    };
+}
+
+// Función para abrir el modal de eliminación
+function openDeleteModal(userId, userName) {
+    document.getElementById('deleteUserName').textContent = userName;
+    
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+    modal.show();
+    
+    // Configurar evento para el botón de confirmar eliminación
+    document.getElementById('confirmDeleteBtn').onclick = function() {
+        deleteUser(userId);
+    };
+}
+
+// Función para guardar los cambios del usuario
+function saveUserChanges() {
+    const userId = document.getElementById('editUserId').value;
+    const userData = {
+        first_name: document.getElementById('editFirstName').value,
+        last_name: document.getElementById('editLastName').value,
+        email: document.getElementById('editEmail').value,
+        rol: document.getElementById('editRol').value
+    };
+    
+    // Si es estudiante, incluir carrera
+    if (userData.rol === 'estudiante') {
+        userData.carrera_id = document.getElementById('editCarrera').value;
+    }
+      const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    
+    fetch(`/usuarios/admin/usuarios/${userId}/editar/`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify(userData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Error actualizando el usuario');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        alert('Usuario actualizado correctamente');
+        
+        // Cerrar el modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+        modal.hide();
+        
+        // Recargar la lista de usuarios
+        loadUsers();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(`Error: ${error.message}`);
+    });
+}
+
+// Función para eliminar un usuario
+function deleteUser(userId) {
+    const adminPassword = document.getElementById('adminPassword').value;
+    
+    if (!adminPassword) {
+        alert('Por favor, ingresa tu contraseña para confirmar la eliminación.');
+        return;
+    }
+      const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    
+    fetch(`/usuarios/admin/usuarios/${userId}/eliminar/`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({ admin_password: adminPassword })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Error eliminando el usuario');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        alert('Usuario eliminado correctamente');
+        
+        // Cerrar el modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteUserModal'));
+        modal.hide();
+        
+        // Limpiar el campo de contraseña
+        document.getElementById('adminPassword').value = '';
+        
+        // Recargar la lista de usuarios
+        loadUsers();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(`Error: ${error.message}`);
+    });
+}
+
+// Función para mostrar/ocultar campo de carrera según el rol
+function toggleCarreraField() {
+    const rol = document.getElementById('editRol').value;
+    const carreraContainer = document.getElementById('editCarreraContainer');
+    
+    if (rol === 'estudiante') {
+        carreraContainer.style.display = 'block';
+        document.getElementById('editCarrera').required = true;
+    } else {
+        carreraContainer.style.display = 'none';
+        document.getElementById('editCarrera').required = false;
+    }
+}
+</script>
+{% endblock %}
