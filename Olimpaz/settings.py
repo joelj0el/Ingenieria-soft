@@ -114,6 +114,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # URLs de redirección después de login/logout
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
+LOGIN_URL = 'login'
 
 # Configuración de Django REST Framework
 REST_FRAMEWORK = {

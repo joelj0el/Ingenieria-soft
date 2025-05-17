@@ -3,12 +3,13 @@
 from django.urls import path
 from django.contrib.auth.views import LogoutView
 from . import views
+from . import jueces_views
 
 urlpatterns = [
     # URLs para vistas basadas en plantillas
     path('registro/', views.RegistroView.as_view(), name='registro'),
     path('login/', views.LoginView.as_view(), name='login'),
-    path('logout/', LogoutView.as_view(next_page='/login/'), name='logout'),
+    path('logout/', views.CustomLogoutView.as_view(), name='logout'),
     
     # URLs para la API REST de usuarios
     path('api/usuarios/', views.UserAPIView.as_view(), name='api-usuarios'),
@@ -37,4 +38,8 @@ urlpatterns = [
     path('admin/usuarios/<int:user_id>/', views.AdminUserDetailView.as_view(), name='admin_user_detail'),
     path('admin/usuarios/<int:user_id>/editar/', views.AdminUserDetailView.as_view(), name='admin_user_edit'),
     path('admin/usuarios/<int:user_id>/eliminar/', views.AdminUserDetailView.as_view(), name='admin_user_delete'),
+    
+    # URLs para la API REST de jueces
+    path('api/jueces/', jueces_views.JuecesAPIView.as_view(), name='api_jueces'),
+    path('api/jueces/<int:juez_id>/', jueces_views.JuezDetailAPIView.as_view(), name='api_juez_detail'),
 ]

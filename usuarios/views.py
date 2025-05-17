@@ -15,6 +15,13 @@ from .serializers import UserSerializer, PerfilSerializer, LoginSerializer, Post
 from django.contrib.auth.models import User
 from .models import Perfil, Post, Carrera
 
+# Clase para personalizar el logout
+class CustomLogoutView(View):
+    def get(self, request):
+        logout(request)
+        messages.success(request, 'Has cerrado sesión correctamente.')
+        return redirect('login')
+
 # Vistas tradicionales basadas en plantillas
 class RegistroView(View):
     def get(self, request):

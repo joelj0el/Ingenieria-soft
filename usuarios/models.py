@@ -50,3 +50,19 @@ class Post(models.Model):
         
     def __str__(self):
         return self.titulo
+
+# Modelo para almacenar jueces
+class Juez(models.Model):
+    nombre_completo = models.CharField(max_length=255)
+    correo_electronico = models.EmailField(unique=True)
+    telefono = models.CharField(max_length=15)
+    especialidad = models.CharField(max_length=255)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['nombre_completo']
+        verbose_name = "Juez"
+        verbose_name_plural = "Jueces"
+    
+    def __str__(self):
+        return self.nombre_completo

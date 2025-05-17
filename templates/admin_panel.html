@@ -15,9 +15,7 @@
                 </button>
             </div>
         </div>
-    </div>
-
-    <div class="tabs-container mt-4">
+    </div>    <div class="tabs-container mt-4">
         <ul class="nav nav-tabs" id="adminTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-content" type="button" role="tab" aria-controls="users-content" aria-selected="true">
@@ -27,6 +25,11 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-content" type="button" role="tab" aria-controls="pending-content" aria-selected="false">
                     <i class="fas fa-clock"></i> Pendientes de Aprobación
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="judges-tab" data-bs-toggle="tab" data-bs-target="#judges-content" type="button" role="tab" aria-controls="judges-content" aria-selected="false">
+                    <i class="fas fa-gavel"></i> Jueces
                 </button>
             </li>
         </ul>
@@ -74,6 +77,35 @@
                     </table>
                 </div>
                 <div id="pendingMessage" class="text-center py-4"></div>
+            </div>
+            
+            <!-- Tab Jueces -->
+            <div class="tab-pane fade" id="judges-content" role="tabpanel" aria-labelledby="judges-tab">
+                <div class="d-flex justify-content-between mb-3">
+                    <h3>Gestión de Jueces</h3>
+                    <button class="btn btn-success" id="addJudgeBtn">
+                        <i class="fas fa-plus-circle"></i> Nuevo Juez
+                    </button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nombre Completo</th>
+                                <th>Correo Electrónico</th>
+                                <th>Teléfono</th>
+                                <th>Especialidad</th>
+                                <th>Fecha Registro</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="judgesTable">
+                            <!-- Los datos de jueces se cargarán aquí dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="judgesMessage" class="text-center py-4"></div>
             </div>
         </div>
     </div>
@@ -156,6 +188,111 @@
     </div>
 </div>
 
+<!-- Modal para crear nuevo juez -->
+<div class="modal fade" id="addJudgeModal" tabindex="-1" aria-labelledby="addJudgeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addJudgeModalLabel">Registrar Nuevo Juez</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addJudgeForm">
+                    <div class="mb-3">
+                        <label for="newJudgeName" class="form-label">Nombre Completo</label>
+                        <input type="text" class="form-control" id="newJudgeName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="newJudgeEmail" class="form-label">Correo Electrónico</label>
+                        <input type="email" class="form-control" id="newJudgeEmail" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="newJudgeTelefono" class="form-label">Número de Teléfono</label>
+                        <input type="tel" class="form-control" id="newJudgeTelefono" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="newJudgeEspecialidad" class="form-label">Especialidad</label>
+                        <input type="text" class="form-control" id="newJudgeEspecialidad" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="saveNewJudgeBtn">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar juez -->
+<div class="modal fade" id="editJudgeModal" tabindex="-1" aria-labelledby="editJudgeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editJudgeModalLabel">Editar Juez</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editJudgeForm">
+                    <input type="hidden" id="editJudgeId">
+                    
+                    <div class="mb-3">
+                        <label for="editJudgeName" class="form-label">Nombre Completo</label>
+                        <input type="text" class="form-control" id="editJudgeName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editJudgeEmail" class="form-label">Correo Electrónico</label>
+                        <input type="email" class="form-control" id="editJudgeEmail" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editJudgeTelefono" class="form-label">Número de Teléfono</label>
+                        <input type="tel" class="form-control" id="editJudgeTelefono" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editJudgeEspecialidad" class="form-label">Especialidad</label>
+                        <input type="text" class="form-control" id="editJudgeEspecialidad" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveJudgeChangesBtn">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para confirmar eliminación de juez -->
+<div class="modal fade" id="deleteJudgeModal" tabindex="-1" aria-labelledby="deleteJudgeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteJudgeModalLabel">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar al juez <span id="deleteJudgeName" class="fw-bold"></span>?</p>
+                <p class="text-danger">Esta acción no se puede deshacer.</p>
+                
+                <div class="mb-3">
+                    <label for="confirmAdminPassword" class="form-label">Ingresa tu contraseña para confirmar:</label>
+                    <input type="password" class="form-control" id="confirmAdminPassword">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteJudgeBtn">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Script para el panel de administración -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -168,6 +305,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cargar solicitudes pendientes
     loadPendingUsers();
     
+    // Cargar jueces
+    loadJudges();
+    
     // Configurar evento para la búsqueda
     document.getElementById('searchBtn').addEventListener('click', searchUsers);
     document.getElementById('searchInput').addEventListener('keypress', function(e) {
@@ -178,6 +318,25 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Mostrar/ocultar campo de carrera según el rol seleccionado
     document.getElementById('editRol').addEventListener('change', toggleCarreraField);
+    
+    // Evento para el botón de agregar nuevo juez
+    document.getElementById('addJudgeBtn').addEventListener('click', function() {
+        // Limpiar el formulario
+        document.getElementById('addJudgeForm').reset();
+        // Mostrar el modal
+        const modal = new bootstrap.Modal(document.getElementById('addJudgeModal'));
+        modal.show();
+    });
+    
+    // Evento para guardar nuevo juez
+    document.getElementById('saveNewJudgeBtn').addEventListener('click', function() {
+        saveNewJudge();
+    });
+    
+    // Evento para guardar cambios de juez
+    document.getElementById('saveJudgeChangesBtn').addEventListener('click', function() {
+        saveJudgeChanges();
+    });
 });
 
 // Función para cargar las carreras disponibles
@@ -310,6 +469,60 @@ function loadPendingUsers() {
         .catch(error => {
             console.error('Error:', error);
             messageDiv.innerHTML = `<div class="alert alert-danger">Error cargando solicitudes: ${error.message}</div>`;
+        });
+}
+
+// Función para cargar la lista de jueces
+function loadJudges() {
+    const tableBody = document.getElementById('judgesTable');
+    const messageDiv = document.getElementById('judgesMessage');
+    
+    tableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></td></tr>';
+    messageDiv.innerHTML = '';
+    
+    fetch('/usuarios/api/jueces/')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la solicitud: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            tableBody.innerHTML = '';
+            
+            if (data.length === 0) {
+                messageDiv.innerHTML = '<div class="alert alert-info">No se encontraron jueces.</div>';
+                return;
+            }
+            
+            data.forEach(juez => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${juez.nombre_completo}</td>
+                    <td>${juez.correo_electronico}</td>
+                    <td>${juez.telefono || 'No especificado'}</td>
+                    <td>${juez.especialidad || 'N/A'}</td>
+                    <td>${juez.fecha_registro}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary edit-judge" data-judge-id="${juez.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-judge" data-judge-id="${juez.id}" data-judge-name="${juez.nombre_completo}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Configurar eventos para botones de editar y eliminar jueces
+            setupJudgeButtons();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            messageDiv.innerHTML = `<div class="alert alert-danger">Error al cargar jueces: ${error.message}</div>`;
         });
 }
 
@@ -628,6 +841,268 @@ function toggleCarreraField() {
         carreraContainer.style.display = 'none';
         document.getElementById('editCarrera').required = false;
     }
+}
+
+// Función para cargar la lista de jueces
+function loadJudges() {
+    const tableBody = document.getElementById('judgesTable');
+    const messageDiv = document.getElementById('judgesMessage');
+    
+    tableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></td></tr>';
+    messageDiv.innerHTML = '';
+    
+    fetch('/usuarios/api/jueces/')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la solicitud: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            tableBody.innerHTML = '';
+            
+            if (data.length === 0) {
+                messageDiv.innerHTML = '<div class="alert alert-info">No se encontraron jueces.</div>';
+                return;
+            }
+            
+            data.forEach(juez => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${juez.nombre_completo}</td>
+                    <td>${juez.correo_electronico}</td>
+                    <td>${juez.telefono || 'No especificado'}</td>
+                    <td>${juez.especialidad || 'N/A'}</td>
+                    <td>${juez.fecha_registro}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary edit-judge" data-judge-id="${juez.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-judge" data-judge-id="${juez.id}" data-judge-name="${juez.nombre_completo}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Configurar eventos para botones de editar y eliminar jueces
+            setupJudgeButtons();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            messageDiv.innerHTML = `<div class="alert alert-danger">Error al cargar jueces: ${error.message}</div>`;
+        });
+}
+
+// Función para configurar eventos de botones de jueces
+function setupJudgeButtons() {
+    // Botones para editar juez
+    document.querySelectorAll('.edit-judge').forEach(button => {
+        button.addEventListener('click', function() {
+            const judgeId = this.getAttribute('data-judge-id');
+            openEditJudgeModal(judgeId);
+        });
+    });
+    
+    // Botones para eliminar juez
+    document.querySelectorAll('.delete-judge').forEach(button => {
+        button.addEventListener('click', function() {
+            const judgeId = this.getAttribute('data-judge-id');
+            const judgeName = this.getAttribute('data-judge-name');
+            openDeleteJudgeModal(judgeId, judgeName);
+        });
+    });
+}
+
+// Función para abrir modal de edición de juez
+function openEditJudgeModal(judgeId) {
+    // Limpiar formulario
+    document.getElementById('editJudgeForm').reset();
+    document.getElementById('editJudgeId').value = judgeId;
+    
+    // Cargar datos del juez
+    fetch(`/usuarios/api/jueces/${judgeId}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al cargar los datos del juez');
+            }
+            return response.json();
+        })
+        .then(juez => {
+            // Rellenar el formulario con los datos del juez
+            document.getElementById('editJudgeName').value = juez.nombre_completo;
+            document.getElementById('editJudgeEmail').value = juez.correo_electronico;
+            document.getElementById('editJudgeTelefono').value = juez.telefono;
+            document.getElementById('editJudgeEspecialidad').value = juez.especialidad;
+            
+            // Mostrar el modal
+            const modal = new bootstrap.Modal(document.getElementById('editJudgeModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(`Error: ${error.message}`);
+        });
+}
+
+// Función para abrir modal de eliminación de juez
+function openDeleteJudgeModal(judgeId, judgeName) {
+    document.getElementById('deleteJudgeName').textContent = judgeName;
+    document.getElementById('confirmAdminPassword').value = '';
+    
+    // Configurar evento para el botón de confirmar eliminación
+    document.getElementById('confirmDeleteJudgeBtn').onclick = function() {
+        deleteJudge(judgeId);
+    };
+    
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('deleteJudgeModal'));
+    modal.show();
+}
+
+// Función para guardar un nuevo juez
+function saveNewJudge() {
+    const judgeData = {
+        nombre_completo: document.getElementById('newJudgeName').value,
+        correo_electronico: document.getElementById('newJudgeEmail').value,
+        telefono: document.getElementById('newJudgeTelefono').value,
+        especialidad: document.getElementById('newJudgeEspecialidad').value
+    };
+    
+    // Validar que todos los campos estén completos
+    if (!judgeData.nombre_completo || !judgeData.correo_electronico || !judgeData.telefono || !judgeData.especialidad) {
+        alert('Por favor, completa todos los campos');
+        return;
+    }
+    
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    
+    fetch('/usuarios/api/jueces/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify(judgeData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Error creando el juez');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        alert('Juez registrado correctamente');
+        
+        // Cerrar el modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('addJudgeModal'));
+        modal.hide();
+        
+        // Recargar la lista de jueces
+        loadJudges();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(`Error: ${error.message}`);
+    });
+}
+
+// Función para guardar cambios de un juez
+function saveJudgeChanges() {
+    const judgeId = document.getElementById('editJudgeId').value;
+    const judgeData = {
+        nombre_completo: document.getElementById('editJudgeName').value,
+        correo_electronico: document.getElementById('editJudgeEmail').value,
+        telefono: document.getElementById('editJudgeTelefono').value,
+        especialidad: document.getElementById('editJudgeEspecialidad').value
+    };
+    
+    // Validar que todos los campos estén completos
+    if (!judgeData.nombre_completo || !judgeData.correo_electronico || !judgeData.telefono || !judgeData.especialidad) {
+        alert('Por favor, completa todos los campos');
+        return;
+    }
+    
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    
+    fetch(`/usuarios/api/jueces/${judgeId}/`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify(judgeData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Error actualizando el juez');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        alert('Juez actualizado correctamente');
+        
+        // Cerrar el modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editJudgeModal'));
+        modal.hide();
+        
+        // Recargar la lista de jueces
+        loadJudges();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(`Error: ${error.message}`);
+    });
+}
+
+// Función para eliminar un juez
+function deleteJudge(judgeId) {
+    const adminPassword = document.getElementById('confirmAdminPassword').value;
+    
+    if (!adminPassword) {
+        alert('Por favor, ingresa tu contraseña para confirmar la eliminación');
+        return;
+    }
+    
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    
+    fetch(`/usuarios/api/jueces/${judgeId}/`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({ admin_password: adminPassword })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Error eliminando el juez');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        alert('Juez eliminado correctamente');
+        
+        // Cerrar el modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteJudgeModal'));
+        modal.hide();
+        
+        // Recargar la lista de jueces
+        loadJudges();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(`Error: ${error.message}`);
+    });
 }
 </script>
 {% endblock %}
