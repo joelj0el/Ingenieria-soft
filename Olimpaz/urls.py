@@ -10,6 +10,7 @@ urlpatterns = [
     path('admin-django/', admin.site.urls),  # Cambiamos la URL del admin de Django
     path('usuarios/', include('usuarios.urls')),
     path('', TemplateView.as_view(template_name='home.html'), name='home'),
+    path('social/', include('social_django.urls', namespace='social')),
 ]
 
 # Agregar rutas para archivos estáticos y media en desarrollo
