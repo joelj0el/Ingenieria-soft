@@ -1,0 +1,29 @@
+# Entorno virtual
+venv/
+
+# Archivos de configuración sensibles
+*.env
+settings.py
+
+# Archivos generados automáticamente
+__pycache__/
+*.pyc
+*.pyo
+*.log
+
+# Archivos de bases de datos locales
+*.sqlite3
+
+# Archivos estáticos generados
+staticfiles/
+media/
+
+# Archivos de migraciones
+migrations/__pycache__/
+*.pyc
+
+# Otros
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,8 @@
+django
+pillow
+djangorestframework
+django-mssql-backend
+pyodbc
+mssql-django
+social-auth-app-django
+python-decouple

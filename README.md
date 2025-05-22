@@ -67,16 +67,11 @@ AQUI ESTAN LOS COMANDOS NECESARIOS PARA PODER HACER CORRER EL PROYECTO.
 python -m venv venv
 venv\Scripts\activate
 
-pip install django
-pip install djangorestframework
-pip install django-mssql-backend
-pip install pyodbc
+pip install -r requirements.txt
 
 python manage.py migrate
 
 python manage.py createsuperuser
-
-
 
 python manage.py runserver
 

@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,7 +25,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'usuarios',  # Nuestra app de usuarios
     'rest_framework',  # Django REST Framework
+    'social_django',  # Para autenticación social
 ]
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.google.GoogleOAuth2',  # backend de Google
+    'django.contrib.auth.backends.ModelBackend', # autenticación normal
+)
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -49,6 +55,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
+
             ],
         },
     },
@@ -131,4 +140,9 @@ REST_FRAMEWORK = {
     ],
     
 }
+
+# Configuración de Google OAuth2
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
+
 ALLOWED_HOSTS = ['*']  # Permitir todas las conexiones (solo para desarrollo)

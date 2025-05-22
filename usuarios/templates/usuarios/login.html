@@ -56,6 +56,13 @@
                         </div>
                     </form>
                 </div>
+                
+                <!-- Botón de inicio de sesión con Google -->
+                <div class="text-center mt-4">
+                    <a href="{% url 'social:begin' 'google-oauth2' %}" class="btn btn-danger">
+                        <i class="fab fa-google me-2"></i> Iniciar sesión con Google
+                    </a>
+                </div>
             </div>
         </div>
     </div>
