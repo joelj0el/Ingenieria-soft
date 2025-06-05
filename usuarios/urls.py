@@ -4,6 +4,7 @@ from django.urls import path
 from django.contrib.auth.views import LogoutView
 from . import views
 from . import jueces_views
+from . import equipos_views
 
 urlpatterns = [
     # URLs para vistas basadas en plantillas
@@ -42,4 +43,16 @@ urlpatterns = [
     # URLs para la API REST de jueces
     path('api/jueces/', jueces_views.JuecesAPIView.as_view(), name='api_jueces'),
     path('api/jueces/<int:juez_id>/', jueces_views.JuezDetailAPIView.as_view(), name='api_juez_detail'),
+    
+    # URLs para la API REST de disciplinas
+    path('api/disciplinas/', equipos_views.DisciplinasAPIView.as_view(), name='api_disciplinas'),
+    path('api/disciplinas/<int:disciplina_id>/', equipos_views.DisciplinaDetailAPIView.as_view(), name='api_disciplina_detail'),
+    
+    # URLs para la API REST de equipos
+    path('api/equipos/', equipos_views.EquiposAPIView.as_view(), name='api_equipos'),
+    path('api/equipos/<int:equipo_id>/', equipos_views.EquipoDetailAPIView.as_view(), name='api_equipo_detail'),
+    path('api/jugadores-disponibles/<int:disciplina_id>/', equipos_views.JugadoresDisponiblesAPIView.as_view(), name='api_jugadores_disponibles'),
+    
+    # URL para la vista de equipos
+    path('teams/', views.TeamsView.as_view(), name='teams'),
 ]

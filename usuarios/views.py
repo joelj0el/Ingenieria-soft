@@ -47,6 +47,26 @@ class RegistroView(View):
                 return redirect('home')
         return render(request, 'usuarios/registro.html', {'form': form})
 
+class TeamsView(View):
+    def get(self, request):
+        # Comprobar si el usuario tiene rol administrativo
+        is_admin = False
+        if request.user.is_authenticated:
+            try:
+                perfil = Perfil.objects.get(usuario=request.user)
+                is_admin = perfil.rol == 'administrativo' and perfil.estado_verificacion == 'aprobado'
+            except Perfil.DoesNotExist:
+                pass
+        
+        # Obtener todas las disciplinas para los tabs
+        from .models import Disciplina
+        disciplinas = Disciplina.objects.all()
+        
+        return render(request, 'teams.html', {
+            'is_admin': is_admin,
+            'disciplinas': disciplinas
+        })
+
 class LoginView(View):
     def get(self, request):
         form = FormularioLogin()

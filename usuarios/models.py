@@ -51,13 +51,60 @@ class Post(models.Model):
     def __str__(self):
         return self.titulo
 
+# Modelo para almacenar disciplinas deportivas
+class Disciplina(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+    descripcion = models.TextField(blank=True)
+    imagen = models.ImageField(upload_to='disciplinas/', blank=True, null=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['nombre']
+        verbose_name = "Disciplina"
+        verbose_name_plural = "Disciplinas"
+    
+    def __str__(self):
+        return self.nombre
+    
+# Modelo para almacenar equipos
+class Equipo(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+    disciplina = models.ForeignKey(Disciplina, on_delete=models.CASCADE, related_name='equipos')
+    descripcion = models.TextField(blank=True)
+    logo = models.ImageField(upload_to='equipos/', blank=True, null=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['nombre']
+        verbose_name = "Equipo"
+        verbose_name_plural = "Equipos"
+    
+    def __str__(self):
+        return self.nombre
+
+# Modelo para relacionar jugadores con equipos
+class JugadorEquipo(models.Model):
+    jugador = models.ForeignKey(User, on_delete=models.CASCADE, related_name='equipos')
+    equipo = models.ForeignKey(Equipo, on_delete=models.CASCADE, related_name='jugadores')
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('jugador', 'equipo')
+        verbose_name = "Jugador de Equipo"
+        verbose_name_plural = "Jugadores de Equipo"
+    
+    def __str__(self):
+        return f"{self.jugador.first_name} {self.jugador.last_name} - {self.equipo.nombre}"
+
 # Modelo para almacenar jueces
 class Juez(models.Model):
     nombre_completo = models.CharField(max_length=255)
     correo_electronico = models.EmailField(unique=True)
     telefono = models.CharField(max_length=15)
     especialidad = models.CharField(max_length=255)
+    disciplinas = models.ManyToManyField('Disciplina', related_name='jueces', verbose_name="Disciplinas especializadas", blank=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
+    activo = models.BooleanField(default=True)
     
     class Meta:
         ordering = ['nombre_completo']

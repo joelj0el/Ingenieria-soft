@@ -1,0 +1,189 @@
+/* Estilos específicos para la sección de equipos */
+
+.teams-container {
+    background-color: rgba(7, 18, 73, 0.3);
+    border-radius: 10px;
+    padding: 25px;
+    margin-top: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.teams-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.teams-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--white);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.teams-actions {
+    display: flex;
+    align-items: center;
+    margin-top: 15px;
+}
+
+.tab-content {
+    padding-top: 20px;
+}
+
+.team-card {
+    background-color: rgba(7, 18, 73, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    height: 100%;
+    transition: transform 0.3s, box-shadow 0.3s;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.team-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    border-color: var(--light-green);
+}
+
+.team-card .card-header {
+    background-color: var(--primary-green);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.team-card .card-body {
+    padding: 1.5rem;
+    background-color: #1e1e1e;
+}
+
+.team-logo {
+    max-height: 150px;
+    width: auto;
+    margin: 0 auto 15px;
+    display: block;
+    object-fit: contain;
+}
+
+.team-logo-detail {
+    max-height: 200px;
+    width: auto;
+    object-fit: contain;
+    margin-bottom: 15px;
+    border-radius: 8px;
+}
+
+/* Estilos para disciplinas */
+.disciplina-card {
+    background-color: #252525;
+    border: 1px solid #444;
+    transition: transform 0.3s;
+    height: 100%;
+    margin-bottom: 20px;
+}
+
+.disciplina-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+}
+
+.disciplina-image {
+    height: 150px;
+    width: 100%;
+    object-fit: cover;
+}
+
+/* Estilos para modales */
+.dark-modal .modal-content {
+    background-color: #343a40;
+    color: #f8f9fa;
+}
+
+.dark-modal .modal-header {
+    border-bottom: 1px solid #495057;
+}
+
+.dark-modal .modal-footer {
+    border-top: 1px solid #495057;
+}
+
+.dark-modal .close {
+    color: #fff;
+}
+
+.dark-modal .form-control,
+.dark-modal .form-select {
+    background-color: #495057;
+    color: #f8f9fa;
+    border-color: #6c757d;
+}
+
+.dark-modal .form-control:focus,
+.dark-modal .form-select:focus {
+    background-color: #495057;
+    color: #f8f9fa;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.dark-modal .form-text {
+    color: #adb5bd;
+}
+
+/* Tabs personalizados */
+.nav-tabs {
+    border-bottom: 1px solid #495057;
+}
+
+.nav-tabs .nav-link {
+    color: #adb5bd;
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+    color: #fff;
+    border-color: #495057 #495057 #495057;
+}
+
+.nav-tabs .nav-link.active {
+    color: #fff;
+    background-color: #343a40;
+    border-color: #495057 #495057 transparent;
+}
+
+/* Botones de equipo */
+.btn-team {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: #fff;
+    transition: all 0.3s;
+}
+
+.btn-team:hover {
+    background-color: #0069d9;
+    border-color: #0062cc;
+    color: #fff;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in-animation {
+    animation: fadeIn 0.5s ease-in;
+}

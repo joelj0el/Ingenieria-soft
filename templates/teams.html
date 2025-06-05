@@ -1,0 +1,861 @@
+{% extends 'base.html' %}
+
+{% block title %}Equipos - OLIMPAZ{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/teams.css">
+<div class="teams-container">
+    {% csrf_token %}
+    <div class="teams-header">
+        <h1 class="teams-title">Equipos OLIMPAZ</h1>
+        {% if is_admin %}
+        <div class="teams-actions">
+            <button id="addDisciplinaBtn" class="btn btn-success me-2">
+                <i class="fas fa-plus-circle"></i> Nueva Disciplina
+            </button>
+            <button id="addTeamBtn" class="btn btn-primary">
+                <i class="fas fa-plus-circle"></i> Nuevo Equipo
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="tabs-container mt-4">
+        <ul class="nav nav-tabs" id="teamsTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="all-teams-tab" data-bs-toggle="tab" data-bs-target="#all-teams-content" type="button" role="tab" aria-controls="all-teams-content" aria-selected="true">
+                    <i class="fas fa-users"></i> Todos los equipos
+                </button>
+            </li>
+            {% for disciplina in disciplinas %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="disciplina-{{ disciplina.id }}-tab" data-bs-toggle="tab" data-bs-target="#disciplina-{{ disciplina.id }}-content" type="button" role="tab" aria-controls="disciplina-{{ disciplina.id }}-content" aria-selected="false">
+                    {{ disciplina.nombre }}
+                </button>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <div class="tab-content mt-3" id="teamsTabsContent">
+            <!-- Tab Todos los equipos -->
+            <div class="tab-pane fade show active" id="all-teams-content" role="tabpanel" aria-labelledby="all-teams-tab">
+                <div class="row" id="teamsContainer">
+                    <!-- Los equipos se cargarán aquí dinámicamente -->
+                </div>
+                <div id="teamsMessage" class="text-center py-4"></div>
+            </div>
+
+            <!-- Tabs para cada disciplina -->
+            {% for disciplina in disciplinas %}
+            <div class="tab-pane fade" id="disciplina-{{ disciplina.id }}-content" role="tabpanel" aria-labelledby="disciplina-{{ disciplina.id }}-tab">
+                <div class="row" id="disciplina-{{ disciplina.id }}-container">
+                    <!-- Los equipos de esta disciplina se cargarán aquí -->
+                </div>
+                <div id="disciplina-{{ disciplina.id }}-message" class="text-center py-4"></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver detalles del equipo -->
+<div class="modal fade" id="teamDetailsModal" tabindex="-1" aria-labelledby="teamDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="teamDetailsModalLabel">Detalles del Equipo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <img id="teamLogoDetail" src="" alt="Logo del equipo" class="img-fluid team-logo-detail">
+                    </div>
+                    <div class="col-md-8">
+                        <h3 id="teamNameDetail"></h3>
+                        <p><strong>Disciplina:</strong> <span id="teamDisciplinaDetail"></span></p>
+                        <p><strong>Descripción:</strong> <span id="teamDescripcionDetail"></span></p>
+                        <p><strong>Fecha de Registro:</strong> <span id="teamFechaDetail"></span></p>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h4>Jugadores</h4>
+                    <table class="table table-dark table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Carrera</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teamJugadoresDetail">
+                            <!-- Los jugadores se cargarán aquí -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                {% if is_admin %}
+                <button type="button" class="btn btn-info" id="editTeamBtn">Editar equipo</button>
+                <button type="button" class="btn btn-danger" id="deleteTeamBtn">Eliminar equipo</button>
+                {% endif %}
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if is_admin %}
+<!-- Modal para agregar/editar equipo -->
+<div class="modal fade" id="addEditTeamModal" tabindex="-1" aria-labelledby="addEditTeamModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEditTeamModalLabel">Nuevo Equipo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addEditTeamForm" enctype="multipart/form-data">
+                    <input type="hidden" id="editTeamId" name="editTeamId">
+                    
+                    <div class="mb-3">
+                        <label for="teamName" class="form-label">Nombre del Equipo</label>
+                        <input type="text" class="form-control" id="teamName" name="nombre" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="teamDisciplina" class="form-label">Disciplina</label>
+                        <select class="form-select" id="teamDisciplina" name="disciplina_id" required>
+                            <!-- Las disciplinas se cargarán dinámicamente -->
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="teamDescripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="teamDescripcion" name="descripcion" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="teamLogo" class="form-label">Logo del Equipo</label>
+                        <input type="file" class="form-control" id="teamLogo" name="logo" accept="image/*">
+                        <div id="teamLogoPreview" class="mt-2 d-none">
+                            <img id="logoPreviewImage" src="" alt="Vista previa del logo" class="img-fluid" style="max-height: 100px;">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="teamJugadores" class="form-label">Jugadores</label>
+                        <select class="form-select" id="teamJugadores" name="jugadores[]" multiple size="5">
+                            <!-- Los jugadores disponibles se cargarán dinámicamente -->
+                        </select>
+                        <small class="form-text text-muted">Mantén presionada la tecla Ctrl para seleccionar múltiples jugadores.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="saveTeamBtn">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para agregar/editar disciplina -->
+<div class="modal fade" id="addEditDisciplinaModal" tabindex="-1" aria-labelledby="addEditDisciplinaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEditDisciplinaModalLabel">Nueva Disciplina</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addEditDisciplinaForm" enctype="multipart/form-data">
+                    <input type="hidden" id="editDisciplinaId" name="editDisciplinaId">
+                    
+                    <div class="mb-3">
+                        <label for="disciplinaNombre" class="form-label">Nombre de la Disciplina</label>
+                        <input type="text" class="form-control" id="disciplinaNombre" name="nombre" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="disciplinaDescripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="disciplinaDescripcion" name="descripcion" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="disciplinaImagen" class="form-label">Imagen de la Disciplina</label>
+                        <input type="file" class="form-control" id="disciplinaImagen" name="imagen" accept="image/*">
+                        <div id="disciplinaImagenPreview" class="mt-2 d-none">
+                            <img id="imagenPreviewImage" src="" alt="Vista previa de la imagen" class="img-fluid" style="max-height: 100px;">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="saveDisciplinaBtn">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para eliminar equipo -->
+<div class="modal fade" id="deleteTeamModal" tabindex="-1" aria-labelledby="deleteTeamModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteTeamModalLabel">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar el equipo <span id="deleteTeamName" class="fw-bold"></span>?</p>
+                <p class="text-danger">Esta acción no se puede deshacer.</p>
+                
+                <div class="mb-3">
+                    <label for="confirmTeamPassword" class="form-label">Ingresa tu contraseña para confirmar:</label>
+                    <input type="password" class="form-control" id="confirmTeamPassword">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteTeamBtn">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para eliminar disciplina -->
+<div class="modal fade" id="deleteDisciplinaModal" tabindex="-1" aria-labelledby="deleteDisciplinaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteDisciplinaModalLabel">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar la disciplina <span id="deleteDisciplinaName" class="fw-bold"></span>?</p>
+                <p class="text-danger">Esta acción no se puede deshacer y elimina todos los equipos asociados.</p>
+                
+                <div class="mb-3">
+                    <label for="confirmDisciplinaPassword" class="form-label">Ingresa tu contraseña para confirmar:</label>
+                    <input type="password" class="form-control" id="confirmDisciplinaPassword">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteDisciplinaBtn">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+    let currentEditingTeamId = null;
+    let currentEditingDisciplinaId = null;
+    let currentDeletingTeamId = null;
+    let currentDeletingDisciplinaId = null;
+    
+    // Cargar todas las disciplinas
+    function cargarDisciplinas() {
+        fetch('/usuarios/api/disciplinas/')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al cargar disciplinas: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Llenar select de disciplinas para el formulario de equipos
+                const selectDisciplina = document.getElementById('teamDisciplina');
+                if (selectDisciplina) {
+                    selectDisciplina.innerHTML = '';
+                    data.forEach(disciplina => {
+                        const option = document.createElement('option');
+                        option.value = disciplina.id;
+                        option.textContent = disciplina.nombre;
+                        selectDisciplina.appendChild(option);
+                    });
+                }
+                
+                // Generar tabs dinámicos para disciplinas
+                const teamsTabsList = document.getElementById('teamsTabs');
+                const teamsTabsContent = document.getElementById('teamsTabsContent');
+                
+                if (teamsTabsList && teamsTabsContent) {
+                    // Mantener el tab "Todos los equipos"
+                    const allTeamsTab = teamsTabsList.querySelector('li:first-child');
+                    teamsTabsList.innerHTML = '';
+                    teamsTabsList.appendChild(allTeamsTab);
+                    
+                    // Mantener el contenido de "Todos los equipos"
+                    const allTeamsContent = teamsTabsContent.querySelector('div:first-child');
+                    teamsTabsContent.innerHTML = '';
+                    teamsTabsContent.appendChild(allTeamsContent);
+                    
+                    // Crear tabs para cada disciplina
+                    data.forEach(disciplina => {
+                        // Crear tab
+                        const tabLi = document.createElement('li');
+                        tabLi.className = 'nav-item';
+                        tabLi.setAttribute('role', 'presentation');
+                        tabLi.innerHTML = `
+                            <button class="nav-link" id="disciplina-${disciplina.id}-tab" data-bs-toggle="tab"
+                                    data-bs-target="#disciplina-${disciplina.id}-content" type="button" role="tab"
+                                    aria-controls="disciplina-${disciplina.id}-content" aria-selected="false">
+                                ${disciplina.nombre}
+                            </button>
+                        `;
+                        teamsTabsList.appendChild(tabLi);
+                        
+                        // Crear contenido del tab
+                        const tabContent = document.createElement('div');
+                        tabContent.className = 'tab-pane fade';
+                        tabContent.id = `disciplina-${disciplina.id}-content`;
+                        tabContent.setAttribute('role', 'tabpanel');
+                        tabContent.setAttribute('aria-labelledby', `disciplina-${disciplina.id}-tab`);
+                        tabContent.innerHTML = `
+                            <div class="row" id="disciplina-${disciplina.id}-container">
+                                <!-- Los equipos se cargarán aquí -->
+                            </div>
+                            <div id="disciplina-${disciplina.id}-message" class="text-center py-4"></div>
+                        `;
+                        teamsTabsContent.appendChild(tabContent);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar disciplinas:', error);
+                document.getElementById('teamsMessage').innerHTML = `<div class="alert alert-danger">Error al cargar disciplinas: ${error.message}</div>`;
+            });
+    }
+    
+    // Cargar todos los equipos
+    function cargarEquipos() {
+        const teamsContainer = document.getElementById('teamsContainer');
+        if (teamsContainer) {
+            teamsContainer.innerHTML = '<div class="col-12 text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div>';
+        }
+        
+        document.getElementById('teamsMessage').innerHTML = '';
+        
+        // Limpiar todos los contenedores de disciplinas antes de cargar
+        document.querySelectorAll('[id^="disciplina-"][id$="-container"]').forEach(container => {
+            container.innerHTML = '';
+        });
+        
+        fetch('/usuarios/api/equipos/')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al cargar equipos: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (teamsContainer) {
+                    teamsContainer.innerHTML = '';
+                }
+                
+                if (data.length === 0) {
+                    document.getElementById('teamsMessage').innerHTML = '<p class="lead">No hay equipos registrados aún.</p>';
+                    // También mostrar mensaje en cada pestaña de disciplina
+                    document.querySelectorAll('[id^="disciplina-"][id$="-message"]').forEach(message => {
+                        message.innerHTML = '<p class="lead">No hay equipos registrados en esta disciplina.</p>';
+                    });
+                    return;
+                }
+                
+                document.getElementById('teamsMessage').innerHTML = '';
+                
+                // Crear un objeto para agrupar equipos por disciplina
+                const equiposPorDisciplina = {};
+                
+                // Crear tarjetas para cada equipo
+                data.forEach(equipo => {
+                    // Añadir a la pestaña "Todos los equipos"
+                    const card = document.createElement('div');
+                    card.className = 'col-md-4 mb-4';
+                    card.innerHTML = `
+                        <div class="card team-card">
+                            <div class="card-header text-center">
+                                <h5 class="card-title">${equipo.nombre}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">${equipo.disciplina.nombre}</h6>
+                            </div>
+                            <div class="card-body text-center">
+                                <img src="${equipo.logo || '/static/images/default-team.svg'}" alt="${equipo.nombre}" class="img-fluid team-logo">
+                                <p class="card-text mt-2">${equipo.descripcion || 'Sin descripción'}</p>
+                                <button class="btn btn-info ver-equipo" data-id="${equipo.id}">Ver detalles</button>
+                            </div>
+                        </div>
+                    `;
+                    teamsContainer.appendChild(card);
+                    
+                    // Agregar evento al botón
+                    const btnVerEquipo = card.querySelector('.ver-equipo');
+                    btnVerEquipo.addEventListener('click', function() {
+                        mostrarDetallesEquipo(equipo.id);
+                    });
+                    
+                    // Agrupar por disciplina para añadirlo a su respectiva pestaña
+                    if (!equiposPorDisciplina[equipo.disciplina.id]) {
+                        equiposPorDisciplina[equipo.disciplina.id] = [];
+                    }
+                    equiposPorDisciplina[equipo.disciplina.id].push(equipo);
+                });
+                
+                // Ahora añadir los equipos a las pestañas por disciplina
+                for (const disciplinaId in equiposPorDisciplina) {
+                    const disciplinaContainer = document.getElementById(`disciplina-${disciplinaId}-container`);
+                    const disciplinaMessage = document.getElementById(`disciplina-${disciplinaId}-message`);
+                    
+                    if (disciplinaContainer) {
+                        disciplinaContainer.innerHTML = ''; // Limpiar el contenedor
+                        
+                        equiposPorDisciplina[disciplinaId].forEach(equipo => {
+                            const card = document.createElement('div');
+                            card.className = 'col-md-4 mb-4';
+                            card.innerHTML = `
+                                <div class="card team-card">
+                                    <div class="card-header text-center">
+                                        <h5 class="card-title">${equipo.nombre}</h5>
+                                        <h6 class="card-subtitle mb-2 text-muted">${equipo.disciplina.nombre}</h6>
+                                    </div>
+                                    <div class="card-body text-center">
+                                        <img src="${equipo.logo || '/static/images/default-team.svg'}" alt="${equipo.nombre}" class="img-fluid team-logo">
+                                        <p class="card-text mt-2">${equipo.descripcion || 'Sin descripción'}</p>
+                                        <button class="btn btn-info ver-equipo" data-id="${equipo.id}">Ver detalles</button>
+                                    </div>
+                                </div>
+                            `;
+                            disciplinaContainer.appendChild(card);
+                            
+                            // Agregar evento al botón
+                            const btnVerEquipo = card.querySelector('.ver-equipo');
+                            btnVerEquipo.addEventListener('click', function() {
+                                mostrarDetallesEquipo(equipo.id);
+                            });
+                        });
+                        
+                        if (disciplinaMessage) {
+                            disciplinaMessage.innerHTML = ''; // Limpiar mensaje de carga
+                        }
+                    }
+                }
+                
+                // Mostrar mensaje para disciplinas sin equipos
+                document.querySelectorAll('[id^="disciplina-"][id$="-container"]').forEach(container => {
+                    if (container.innerHTML === '') {
+                        const disciplinaId = container.id.match(/disciplina-(\d+)-container/)[1];
+                        const messageContainer = document.getElementById(`disciplina-${disciplinaId}-message`);
+                        if (messageContainer) {
+                            messageContainer.innerHTML = '<p class="lead">No hay equipos registrados en esta disciplina.</p>';
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error al cargar equipos:', error);
+                document.getElementById('teamsMessage').innerHTML = `<div class="alert alert-danger">Error al cargar equipos: ${error.message}</div>`;
+            });
+    }
+    
+    // Mostrar detalles de un equipo
+    function mostrarDetallesEquipo(equipoId) {
+        const teamDetailsModal = new bootstrap.Modal(document.getElementById('teamDetailsModal'));
+        
+        fetch(`/usuarios/api/equipos/${equipoId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al cargar detalles del equipo: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(equipo => {
+                document.getElementById('teamNameDetail').textContent = equipo.nombre;
+                document.getElementById('teamDisciplinaDetail').textContent = equipo.disciplina.nombre;
+                document.getElementById('teamDescripcionDetail').textContent = equipo.descripcion || 'Sin descripción';
+                document.getElementById('teamFechaDetail').textContent = equipo.fecha_registro;
+                
+                const logoImg = document.getElementById('teamLogoDetail');
+                logoImg.src = equipo.logo || '/static/images/default-team.svg';
+                logoImg.alt = equipo.nombre;
+                
+                // Guardar ID para la eliminación
+                currentDeletingTeamId = equipoId;
+                if (document.getElementById('deleteTeamName')) {
+                    document.getElementById('deleteTeamName').textContent = equipo.nombre;
+                }
+                
+                const jugadoresTable = document.getElementById('teamJugadoresDetail');
+                jugadoresTable.innerHTML = '';
+                
+                if (equipo.jugadores && equipo.jugadores.length > 0) {
+                    equipo.jugadores.forEach(jugador => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${jugador.nombre || 'Sin nombre'}</td>
+                            <td>${jugador.email || 'Sin email'}</td>
+                            <td>${jugador.carrera || 'No especificada'}</td>
+                        `;
+                        jugadoresTable.appendChild(tr);
+                    });
+                } else {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td colspan="3" class="text-center">No hay jugadores registrados</td>';
+                    jugadoresTable.appendChild(tr);
+                }
+                
+                // Si existe el botón de editar, configurarlo
+                const editTeamBtn = document.getElementById('editTeamBtn');
+                if (editTeamBtn) {
+                    editTeamBtn.onclick = function() {
+                        prepararEdicionEquipo(equipo);
+                        teamDetailsModal.hide();
+                    };
+                }
+                
+                // Si existe el botón de eliminar, configurarlo
+                const deleteTeamBtn = document.getElementById('deleteTeamBtn');
+                if (deleteTeamBtn) {
+                    deleteTeamBtn.onclick = function() {
+                        teamDetailsModal.hide();
+                        const deleteTeamModal = new bootstrap.Modal(document.getElementById('deleteTeamModal'));
+                        deleteTeamModal.show();
+                    };
+                }
+                
+                teamDetailsModal.show();
+            })
+            .catch(error => {
+                console.error('Error al cargar detalles del equipo:', error);
+                alert('Error al cargar los detalles del equipo: ' + error.message);
+            });
+    }
+    
+    // Cargar jugadores disponibles para un equipo
+    function cargarJugadoresDisponibles(disciplinaId, equipoId = null) {
+        const jugadoresSelect = document.getElementById('teamJugadores');
+        if (!jugadoresSelect) return;
+        
+        jugadoresSelect.innerHTML = '<option disabled>Cargando jugadores...</option>';
+        
+        let url = `/usuarios/api/jugadores-disponibles/${disciplinaId}/`;
+        if (equipoId) {
+            url += `?equipo_id=${equipoId}`;
+        }
+        
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al cargar jugadores disponibles: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                jugadoresSelect.innerHTML = '';
+                
+                if (data.length === 0) {
+                    jugadoresSelect.innerHTML = '<option disabled>No hay jugadores disponibles</option>';
+                    return;
+                }
+                
+                data.forEach(jugador => {
+                    const option = document.createElement('option');
+                    option.value = jugador.id;
+                    // Asegurarse de mostrar algo como nombre
+                    const nombreMostrar = jugador.nombre || jugador.email.split('@')[0];
+                    option.textContent = `${nombreMostrar} (${jugador.email})`;
+                    option.selected = jugador.seleccionado || false;
+                    jugadoresSelect.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error al cargar jugadores:', error);
+                jugadoresSelect.innerHTML = '<option disabled>Error al cargar jugadores</option>';
+            });
+    }
+    
+    // Preparar formulario para editar un equipo
+    function prepararEdicionEquipo(equipo) {
+        currentEditingTeamId = equipo.id;
+        document.getElementById('addEditTeamModalLabel').textContent = 'Editar Equipo';
+        document.getElementById('editTeamId').value = equipo.id;
+        document.getElementById('teamName').value = equipo.nombre;
+        document.getElementById('teamDescripcion').value = equipo.descripcion || '';
+        
+        const selectDisciplina = document.getElementById('teamDisciplina');
+        for (let i = 0; i < selectDisciplina.options.length; i++) {
+            if (selectDisciplina.options[i].value == equipo.disciplina.id) {
+                selectDisciplina.selectedIndex = i;
+                break;
+            }
+        }
+        
+        // Cargar jugadores disponibles y seleccionar los actuales
+        cargarJugadoresDisponibles(equipo.disciplina.id, equipo.id);
+        
+        // Mostrar vista previa del logo si existe
+        if (equipo.logo) {
+            document.getElementById('teamLogoPreview').classList.remove('d-none');
+            document.getElementById('logoPreviewImage').src = equipo.logo;
+        } else {
+            document.getElementById('teamLogoPreview').classList.add('d-none');
+        }
+        
+        const addEditTeamModal = new bootstrap.Modal(document.getElementById('addEditTeamModal'));
+        addEditTeamModal.show();
+    }
+    
+    // Guardar un equipo (crear o actualizar)
+    function guardarEquipo(event) {
+        event.preventDefault();
+        
+        const formData = new FormData(document.getElementById('addEditTeamForm'));
+        const equipoId = document.getElementById('editTeamId').value;
+        const isEdit = equipoId !== '';
+        
+        // Obtener los jugadores seleccionados
+        const jugadoresSelect = document.getElementById('teamJugadores');
+        const jugadoresSeleccionados = Array.from(jugadoresSelect.selectedOptions).map(option => option.value);
+        
+        // Limpiar formulario de jugadores y añadirlos nuevamente
+        formData.delete('jugadores[]'); // Eliminar entrada anterior si existe
+        jugadoresSeleccionados.forEach(jugadorId => {
+            formData.append('jugadores[]', jugadorId);
+        });
+        
+        let url = isEdit ? `/usuarios/api/equipos/${equipoId}/` : '/usuarios/api/equipos/';
+        let method = isEdit ? 'PUT' : 'POST';
+        
+        fetch(url, {
+            method: method,
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Error al guardar el equipo');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Cerrar modal
+            bootstrap.Modal.getInstance(document.getElementById('addEditTeamModal')).hide();
+            
+            // Mostrar mensaje de éxito
+            const mensaje = isEdit ? 'Equipo actualizado correctamente' : 'Equipo creado correctamente';
+            document.getElementById('teamsMessage').innerHTML = `<div class="alert alert-success">${mensaje}</div>`;
+            
+            // Resetear variables globales
+            currentEditingTeamId = null;
+            
+            // Recargar datos completos (disciplinas y equipos)
+            if (isEdit) {
+                // Si estamos editando, es posible que haya cambiado la disciplina, así que recargamos todo
+                cargarDisciplinas();
+                setTimeout(() => {
+                    cargarEquipos();
+                }, 500);
+            } else {
+                // Si es nuevo, solo recargamos equipos
+                cargarEquipos();
+            }
+        })
+        .catch(error => {
+            console.error('Error al guardar equipo:', error);
+            alert('Error: ' + error.message);
+        });
+    }
+    
+    // Eliminar un equipo
+    function eliminarEquipo(event) {
+        event.preventDefault();
+        
+        const password = document.getElementById('confirmTeamPassword').value;
+        
+        if (!password) {
+            alert('Debes ingresar tu contraseña para confirmar');
+            return;
+        }
+        
+        fetch(`/usuarios/api/equipos/${currentDeletingTeamId}/`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                admin_password: password
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Error al eliminar el equipo');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Cerrar modal
+            bootstrap.Modal.getInstance(document.getElementById('deleteTeamModal')).hide();
+            
+            // Mostrar mensaje de éxito
+            document.getElementById('teamsMessage').innerHTML = '<div class="alert alert-success">Equipo eliminado correctamente</div>';
+            
+            // Recargar datos
+            cargarEquipos();
+        })
+        .catch(error => {
+            console.error('Error al eliminar equipo:', error);
+            alert('Error: ' + error.message);
+        });
+    }
+    
+    // Preparar formulario para crear una nueva disciplina
+    function prepararNuevaDisciplina() {
+        document.getElementById('addEditDisciplinaModalLabel').textContent = 'Nueva Disciplina';
+        document.getElementById('editDisciplinaId').value = '';
+        document.getElementById('disciplinaNombre').value = '';
+        document.getElementById('disciplinaDescripcion').value = '';
+        document.getElementById('disciplinaImagenPreview').classList.add('d-none');
+        
+        const addEditDisciplinaModal = new bootstrap.Modal(document.getElementById('addEditDisciplinaModal'));
+        addEditDisciplinaModal.show();
+    }
+    
+    // Guardar una disciplina (crear o actualizar)
+    function guardarDisciplina(event) {
+        event.preventDefault();
+        
+        const formData = new FormData(document.getElementById('addEditDisciplinaForm'));
+        const disciplinaId = document.getElementById('editDisciplinaId').value;
+        const isEdit = disciplinaId !== '';
+        
+        let url = isEdit ? `/usuarios/api/disciplinas/${disciplinaId}/` : '/usuarios/api/disciplinas/';
+        let method = isEdit ? 'PUT' : 'POST';
+        
+        fetch(url, {
+            method: method,
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Error al guardar la disciplina');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Cerrar modal
+            bootstrap.Modal.getInstance(document.getElementById('addEditDisciplinaModal')).hide();
+            
+            // Mostrar mensaje de éxito
+            const mensaje = isEdit ? 'Disciplina actualizada correctamente' : 'Disciplina creada correctamente';
+            document.getElementById('teamsMessage').innerHTML = `<div class="alert alert-success">${mensaje}</div>`;
+            
+            // Recargar datos
+            cargarDisciplinas();
+            cargarEquipos();
+        })
+        .catch(error => {
+            console.error('Error al guardar disciplina:', error);
+            alert('Error: ' + error.message);
+        });
+    }
+    
+    // Preparar formulario para crear un nuevo equipo
+    function prepararNuevoEquipo() {
+        currentEditingTeamId = null;
+        document.getElementById('addEditTeamModalLabel').textContent = 'Nuevo Equipo';
+        document.getElementById('editTeamId').value = '';
+        document.getElementById('addEditTeamForm').reset();
+        document.getElementById('teamLogoPreview').classList.add('d-none');
+        
+        // Cargar jugadores disponibles para la disciplina seleccionada
+        const disciplinaId = document.getElementById('teamDisciplina').value;
+        if (disciplinaId) {
+            cargarJugadoresDisponibles(disciplinaId);
+        }
+        
+        const addEditTeamModal = new bootstrap.Modal(document.getElementById('addEditTeamModal'));
+        addEditTeamModal.show();
+    }
+    
+    // Cuando cambia la disciplina, cargar jugadores disponibles
+    if (document.getElementById('teamDisciplina')) {
+        document.getElementById('teamDisciplina').addEventListener('change', function() {
+            cargarJugadoresDisponibles(this.value, currentEditingTeamId);
+        });
+    }
+    
+    // Mostrar vista previa del logo del equipo
+    if (document.getElementById('teamLogo')) {
+        document.getElementById('teamLogo').addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('teamLogoPreview').classList.remove('d-none');
+                    document.getElementById('logoPreviewImage').src = e.target.result;
+                };
+                reader.readAsDataURL(this.files[0]);
+            } else {
+                document.getElementById('teamLogoPreview').classList.add('d-none');
+            }
+        });
+    }
+    
+    // Mostrar vista previa de la imagen de la disciplina
+    if (document.getElementById('disciplinaImagen')) {
+        document.getElementById('disciplinaImagen').addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('disciplinaImagenPreview').classList.remove('d-none');
+                    document.getElementById('imagenPreviewImage').src = e.target.result;
+                };
+                reader.readAsDataURL(this.files[0]);
+            } else {
+                document.getElementById('disciplinaImagenPreview').classList.add('d-none');
+            }
+        });
+    }
+    
+    // Eventos para botones
+    if (document.getElementById('addTeamBtn')) {
+        document.getElementById('addTeamBtn').addEventListener('click', prepararNuevoEquipo);
+    }
+    
+    if (document.getElementById('addDisciplinaBtn')) {
+        document.getElementById('addDisciplinaBtn').addEventListener('click', prepararNuevaDisciplina);
+    }
+    
+    if (document.getElementById('saveTeamBtn')) {
+        document.getElementById('saveTeamBtn').addEventListener('click', guardarEquipo);
+    }
+    
+    if (document.getElementById('saveDisciplinaBtn')) {
+        document.getElementById('saveDisciplinaBtn').addEventListener('click', guardarDisciplina);
+    }
+    
+    if (document.getElementById('confirmDeleteTeamBtn')) {
+        document.getElementById('confirmDeleteTeamBtn').addEventListener('click', eliminarEquipo);
+    }
+      // Iniciar la carga de datos
+    cargarDisciplinas();
+    cargarEquipos();
+});
+</script>
+{% endblock %}
+

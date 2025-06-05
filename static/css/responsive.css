@@ -1,0 +1,44 @@
+/* Media queries para la nueva barra de navegación */
+@media (max-width: 992px) {
+    .header-top {
+        flex-direction: column;
+        padding: 15px 20px;
+    }
+    
+    .header-logo {
+        margin-bottom: 15px;
+    }
+    
+    .header-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .olimpaz-logo {
+        font-size: 36px;
+        letter-spacing: 2px;
+    }
+}
+
+@media (max-width: 576px) {
+    .olimpaz-logo {
+        font-size: 28px;
+    }
+    
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+    }
+    
+    .user-info {
+        align-items: center;
+        margin-bottom: 10px;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .header-brand {
+        margin-top: 10px;
+    }
+}

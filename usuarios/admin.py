@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Perfil, Post, Carrera
+from .models import Perfil, Post, Carrera, Disciplina, Equipo, JugadorEquipo, Juez
 
 # Registrar los modelos en el panel de administración
 @admin.register(Perfil)
@@ -30,3 +30,26 @@ class CarreraAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'abreviatura', 'activo')
     list_filter = ('activo',)
     search_fields = ('nombre',)
+
+@admin.register(Disciplina)
+class DisciplinaAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'fecha_registro')
+    search_fields = ('nombre',)
+
+@admin.register(Equipo)
+class EquipoAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'disciplina', 'fecha_registro')
+    list_filter = ('disciplina',)
+    search_fields = ('nombre',)
+
+@admin.register(JugadorEquipo)
+class JugadorEquipoAdmin(admin.ModelAdmin):
+    list_display = ('jugador', 'equipo', 'fecha_registro')
+    list_filter = ('equipo',)
+    search_fields = ('jugador__username', 'equipo__nombre')
+
+@admin.register(Juez)
+class JuezAdmin(admin.ModelAdmin):
+    list_display = ('nombre_completo', 'especialidad', 'correo_electronico', 'fecha_registro')
+    list_filter = ('especialidad',)
+    search_fields = ('nombre_completo', 'correo_electronico')
