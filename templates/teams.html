@@ -516,12 +516,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         teamDetailsModal.hide();
                     };
                 }
-                
-                // Si existe el botón de eliminar, configurarlo
+                  // Si existe el botón de eliminar, configurarlo
                 const deleteTeamBtn = document.getElementById('deleteTeamBtn');
                 if (deleteTeamBtn) {
                     deleteTeamBtn.onclick = function() {
                         teamDetailsModal.hide();
+                        // Limpiar el campo de contraseña antes de mostrar el modal
+                        document.getElementById('confirmTeamPassword').value = '';
                         const deleteTeamModal = new bootstrap.Modal(document.getElementById('deleteTeamModal'));
                         deleteTeamModal.show();
                     };
@@ -702,8 +703,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
             return response.json();
-        })
-        .then(data => {
+        })        .then(data => {
+            // Limpiar el campo de contraseña
+            document.getElementById('confirmTeamPassword').value = '';
+            
             // Cerrar modal
             bootstrap.Modal.getInstance(document.getElementById('deleteTeamModal')).hide();
             
@@ -712,9 +715,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Recargar datos
             cargarEquipos();
-        })
-        .catch(error => {
+        })        .catch(error => {
             console.error('Error al eliminar equipo:', error);
+            // Limpiar el campo de contraseña incluso en caso de error
+            document.getElementById('confirmTeamPassword').value = '';
             alert('Error: ' + error.message);
         });
     }
