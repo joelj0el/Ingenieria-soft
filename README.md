@@ -21,7 +21,7 @@ OLIMPAZ es un sistema web desarrollado en Django para la gestión de competencia
 - **Backend**: Django 4.2+
 - **API**: Django REST Framework
 - **Autenticación**: JWT (JSON Web Tokens)
-- **Base de datos**: SQLite (desarrollo), PostgreSQL (producción)
+- **Base de datos**: SQL SERVER
 - **Documentación API**: drf-yasg (Swagger)
 - **Frontend**: HTML, CSS, JavaScript
 - **Imágenes**: Pillow para procesamiento
@@ -37,36 +37,36 @@ OLIMPAZ es un sistema web desarrollado en Django para la gestión de competencia
 ### Pasos de instalación
 
 1. **Clonar el repositorio**
-   ```bash
-   git clone https://github.com/tu-usuario/olimpaz.git
-   cd olimpaz
-   ```
 
-2. **Crear entorno virtual**
-   ```bash
-   python -m venv venv
-   
-   # En Windows
-   venv\Scripts\activate
-   
-   # En macOS/Linux
-   source venv/bin/activate
-   ```
 
-3. **Instalar dependencias**
-   ```bash
-   pip install -r requirements.txt
-   ```
+2. **Configurar base de datos**
 
-4. **Configurar variables de entorno**
-   ```bash
-   # Copiar el archivo de ejemplo
-   cp .env.example .env
-   
-   # Editar .env con tus configuraciones
-   ```
 
-5. **Configurar base de datos**
+CREA EL MODELO
+   BASE DE DATOS:Add commentMore actions
+
+-- Crear la base de datos
+CREATE DATABASE OLIMPAZ1;
+GO
+
+USE OLIMPAZ1;
+GO
+
+-- Tabla para el perfil (extensión del modelo User)
+CREATE TABLE usuarios_perfil (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    usuario_id INT NOT NULL UNIQUE,
+    telefono NVARCHAR(15) NULL,
+    direccion NVARCHAR(MAX) NULL,
+    fecha_registro DATETIME NOT NULL
+);
+GO
+
+-- Crear índices para mejorar el rendimiento
+-- Puedes agregar índices específicos si es necesario más adelante
+-- CREATE INDEX IX_usuarios_perfil_usuario_id ON usuarios_perfil (usuario_id);
+GO
+
    ```bash
    python manage.py makemigrations
    python manage.py migrate
