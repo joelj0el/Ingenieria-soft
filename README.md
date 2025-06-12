@@ -41,33 +41,32 @@ OLIMPAZ es un sistema web desarrollado en Django para la gestión de competencia
 
 2. **Configurar base de datos**
 
-
+```bash
 CREA EL MODELO
-   BASE DE DATOS:Add commentMore actions
 
--- Crear la base de datos
-CREATE DATABASE OLIMPAZ1;
-GO
+   -- Crear la base de datos
+   CREATE DATABASE OLIMPAZ1;
+   GO
 
-USE OLIMPAZ1;
-GO
+   USE OLIMPAZ1;
+   GO
 
--- Tabla para el perfil (extensión del modelo User)
-CREATE TABLE usuarios_perfil (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    usuario_id INT NOT NULL UNIQUE,
-    telefono NVARCHAR(15) NULL,
-    direccion NVARCHAR(MAX) NULL,
-    fecha_registro DATETIME NOT NULL
-);
-GO
+   -- Tabla para el perfil (extensión del modelo User)
+   CREATE TABLE usuarios_perfil (
+       id INT IDENTITY(1,1) PRIMARY KEY,
+       usuario_id INT NOT NULL UNIQUE,
+       telefono NVARCHAR(15) NULL,
+       direccion NVARCHAR(MAX) NULL,
+       fecha_registro DATETIME NOT NULL
+   );
+   GO
 
--- Crear índices para mejorar el rendimiento
--- Puedes agregar índices específicos si es necesario más adelante
--- CREATE INDEX IX_usuarios_perfil_usuario_id ON usuarios_perfil (usuario_id);
-GO
+   -- Crear índices para mejorar el rendimiento
+   -- Puedes agregar índices específicos si es necesario más adelante
+   -- CREATE INDEX IX_usuarios_perfil_usuario_id ON usuarios_perfil (usuario_id);
+   GO
 
-   ```bash
+   
    python manage.py makemigrations
    python manage.py migrate
    ```
