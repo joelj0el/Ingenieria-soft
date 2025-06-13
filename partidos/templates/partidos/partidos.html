@@ -1,0 +1,942 @@
+{% extends 'base.html' %}
+
+{% block title %}Partidos - OLIMPAZ{% endblock %}
+
+{% block content %}
+<div class="partidos-container">
+    {% csrf_token %}
+    <div class="partidos-header">
+        <h1 class="partidos-title">Gestión de Partidos</h1>
+        <small class="text-muted">Programa y gestiona encuentros deportivos</small>
+        {% if is_admin %}
+        <div class="partidos-actions mt-3">
+            <button id="generarFixtureBtn" class="btn btn-success me-2">
+                <i class="fas fa-calendar-plus"></i> Generar Fixtures
+            </button>
+            <button id="nuevoPartidoBtn" class="btn btn-primary">
+                <i class="fas fa-plus-circle"></i> Nuevo Partido
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Filtros -->
+    <div class="filtros-container mt-4">
+        <div class="row">
+            <div class="col-md-3">
+                <select class="form-select" id="filtroEstado">
+                    <option value="">Todos los estados</option>
+                    <option value="programado">Programado</option>
+                    <option value="en_vivo">En Vivo</option>
+                    <option value="finalizado">Finalizado</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filtroDisciplina">
+                    <option value="">Todas las disciplinas</option>
+                    {% for disciplina in disciplinas %}
+                    <option value="{{ disciplina.id }}">{{ disciplina.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filtroCategoria">
+                    <option value="">Todas las categorías</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="femenino">Femenino</option>
+                    <option value="mixto">Mixto</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <p class="mb-0"><span id="partidosEncontrados" class="badge bg-info">0 partidos encontrados</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor de partidos -->
+    <div class="partidos-grid mt-4" id="partidosContainer">
+        <!-- Los partidos se cargarán aquí dinámicamente -->
+    </div>
+    
+    <div id="partidosMessage" class="text-center py-4"></div>
+</div>
+
+<!-- Modal para generar fixture -->
+<div class="modal fade" id="generarFixtureModal" tabindex="-1" aria-labelledby="generarFixtureModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="generarFixtureModalLabel">Generar Siguiente Jornada</h5>
+                <small class="text-muted d-block">Crear la próxima jornada del fixture round-robin</small>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="generarFixtureForm">
+                    <!-- Estado del fixture -->
+                    <div class="alert alert-info" id="estadoFixtureInfo" style="display: none;">
+                        <h6><i class="fas fa-info-circle"></i> Estado del Fixture</h6>
+                        <div id="estadoFixtureContent">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fixtureDisciplina" class="form-label">Disciplina</label>
+                                <select class="form-select" id="fixtureDisciplina" name="disciplina_id" required>
+                                    <option value="">Seleccionar disciplina</option>
+                                    {% for disciplina in disciplinas %}
+                                    <option value="{{ disciplina.id }}">{{ disciplina.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fixtureCategoria" class="form-label">Categoría</label>
+                                <select class="form-select" id="fixtureCategoria" name="categoria" required>
+                                    <option value="">Seleccionar categoría</option>
+                                    <option value="masculino">Masculino</option>
+                                    <option value="femenino">Femenino</option>
+                                    <option value="mixto">Mixto</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="fechaPartido" class="form-label">Fecha para los Partidos de esta Jornada</label>
+                                <input type="date" class="form-control" id="fechaPartido" name="fecha_partido" required>
+                                <small class="text-muted">Todos los partidos de esta jornada se programarán para esta fecha</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="horaInicio" class="form-label">Hora de Inicio</label>
+                                <input type="time" class="form-control" id="horaInicio" name="hora_inicio" value="09:00" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="horaFin" class="form-label">Hora de Fin</label>
+                                <input type="time" class="form-control" id="horaFin" name="hora_fin" value="18:00" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="duracionPartido" class="form-label">Duración del Partido (minutos)</label>
+                                <input type="number" class="form-control" id="duracionPartido" name="duracion_partido" value="90" min="30" max="180">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="descansoPartidos" class="form-label">Descanso entre Partidos (minutos)</label>
+                                <input type="number" class="form-control" id="descansoPartidos" name="descanso_partidos" value="30" min="15" max="120">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Seleccionar Sedes (mínimo 1)</label>
+                        <div class="sedes-selection">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sede1" name="sedes" value="Campo Principal">
+                                <label class="form-check-label" for="sede1">Campo Principal</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sede2" name="sedes" value="Campo Auxiliar">
+                                <label class="form-check-label" for="sede2">Campo Auxiliar</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sede3" name="sedes" value="Gimnasio Norte">
+                                <label class="form-check-label" for="sede3">Gimnasio Norte</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sede4" name="sedes" value="Gimnasio Sur">
+                                <label class="form-check-label" for="sede4">Gimnasio Sur</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sede5" name="sedes" value="Cancha de Tenis 1">
+                                <label class="form-check-label" for="sede5">Cancha de Tenis 1</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sede6" name="sedes" value="Cancha de Tenis 2">
+                                <label class="form-check-label" for="sede6">Cancha de Tenis 2</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sede7" name="sedes" value="Cancha de Voleibol">
+                                <label class="form-check-label" for="sede7">Cancha de Voleibol</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sede8" name="sedes" value="Polideportivo Central">
+                                <label class="form-check-label" for="sede8">Polideportivo Central</label>
+                            </div>
+                        </div>
+                        <small class="text-muted">Los partidos se asignarán aleatoriamente a las sedes seleccionadas</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="generarFixtureSubmitBtn">Generar Jornada</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para nuevo partido manual -->
+<div class="modal fade" id="nuevoPartidoModal" tabindex="-1" aria-labelledby="nuevoPartidoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="nuevoPartidoModalLabel">Nuevo Partido</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="nuevoPartidoForm">
+                    <div class="mb-3">
+                        <label for="partidoDisciplina" class="form-label">Disciplina</label>
+                        <select class="form-select" id="partidoDisciplina" name="disciplina_id" required>
+                            <option value="">Seleccionar disciplina</option>
+                            {% for disciplina in disciplinas %}
+                            <option value="{{ disciplina.id }}">{{ disciplina.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="partidoCategoria" class="form-label">Categoría</label>
+                        <select class="form-select" id="partidoCategoria" name="categoria" required>
+                            <option value="">Seleccionar categoría</option>
+                            <option value="masculino">Masculino</option>
+                            <option value="femenino">Femenino</option>
+                            <option value="mixto">Mixto</option>
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="equipoA" class="form-label">Equipo A</label>
+                                <select class="form-select" id="equipoA" name="equipo_a_id" required>
+                                    <option value="">Seleccionar equipo</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="equipoB" class="form-label">Equipo B</label>
+                                <select class="form-select" id="equipoB" name="equipo_b_id" required>
+                                    <option value="">Seleccionar equipo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fechaPartido" class="form-label">Fecha</label>
+                                <input type="date" class="form-control" id="fechaPartido" name="fecha" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="horaPartido" class="form-label">Hora</label>
+                                <input type="time" class="form-control" id="horaPartido" name="hora" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="lugarPartido" class="form-label">Lugar (Opcional)</label>
+                        <input type="text" class="form-control" id="lugarPartido" name="lugar" placeholder="Campo Principal, Gimnasio Norte, etc.">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="estadoPartido" class="form-label">Estado</label>
+                        <select class="form-select" id="estadoPartido" name="estado">
+                            <option value="programado">Programado</option>
+                            <option value="en_vivo">En Vivo</option>
+                            <option value="finalizado">Finalizado</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="crearPartidoBtn">Crear</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar partido -->
+<div class="modal fade" id="editarPartidoModal" tabindex="-1" aria-labelledby="editarPartidoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editarPartidoModalLabel">Editar Partido</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editarPartidoForm">
+                    <input type="hidden" id="editPartidoId">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editFechaPartido" class="form-label">Fecha</label>
+                                <input type="date" class="form-control" id="editFechaPartido">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editHoraPartido" class="form-label">Hora</label>
+                                <input type="time" class="form-control" id="editHoraPartido">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editLugarPartido" class="form-label">Lugar</label>
+                        <input type="text" class="form-control" id="editLugarPartido">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editEstadoPartido" class="form-label">Estado</label>
+                        <select class="form-select" id="editEstadoPartido">
+                            <option value="programado">Programado</option>
+                            <option value="en_vivo">En Vivo</option>
+                            <option value="finalizado">Finalizado</option>
+                        </select>
+                    </div>
+                    
+                    <div class="row" id="resultadoSection" style="display: none;">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editGolesEquipoA" class="form-label">Goles Equipo A</label>
+                                <input type="number" class="form-control" id="editGolesEquipoA" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editGolesEquipoB" class="form-label">Goles Equipo B</label>
+                                <input type="number" class="form-control" id="editGolesEquipoB" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="actualizarPartidoBtn">Actualizar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.partidos-container {
+    min-height: 100vh;
+    padding: 2rem;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+}
+
+.partidos-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.partidos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.partido-card {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 1.5rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.partido-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.vs-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 1rem 0;
+}
+
+.equipo {
+    text-align: center;
+    flex: 1;
+}
+
+.equipo-logo {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 0.5rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.vs-text {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #ffd700;
+    margin: 0 1rem;
+}
+
+.partido-info {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.estado-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.estado-programado {
+    background-color: #6c757d;
+    color: white;
+}
+
+.estado-en_vivo {
+    background-color: #dc3545;
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+.estado-finalizado {
+    background-color: #28a745;
+    color: white;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.dark-modal .modal-content {
+    background-color: #2c3e50;
+    color: white;
+}
+
+.dark-modal .form-control,
+.dark-modal .form-select {
+    background-color: #34495e;
+    color: white;
+    border: 1px solid #5a6c7d;
+}
+
+.dark-modal .form-control:focus,
+.dark-modal .form-select:focus {
+    background-color: #34495e;
+    color: white;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.sedes-selection {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.filtros-container {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    border-radius: 10px;
+    backdrop-filter: blur(5px);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    let partidos = [];
+    let currentEditingPartidoId = null;
+
+    // Event listeners principales
+    document.getElementById('generarFixtureBtn')?.addEventListener('click', prepararGenerarFixture);
+    document.getElementById('nuevoPartidoBtn')?.addEventListener('click', prepararNuevoPartido);
+    document.getElementById('generarFixtureSubmitBtn')?.addEventListener('click', generarFixture);
+    document.getElementById('crearPartidoBtn')?.addEventListener('click', crearPartido);
+    document.getElementById('actualizarPartidoBtn')?.addEventListener('click', actualizarPartido);    // Event listeners para filtros
+    document.getElementById('filtroEstado')?.addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroDisciplina')?.addEventListener('change', aplicarFiltros);
+    document.getElementById('filtroCategoria')?.addEventListener('change', aplicarFiltros);
+
+    // Event listeners para modales
+    document.getElementById('partidoDisciplina')?.addEventListener('change', cargarEquiposPorDisciplina);
+    document.getElementById('partidoCategoria')?.addEventListener('change', cargarEquiposPorDisciplina);
+    document.getElementById('editEstadoPartido')?.addEventListener('change', toggleResultadoSection);
+    
+    // Event listeners para cargar el estado del fixture
+    document.getElementById('fixtureDisciplina')?.addEventListener('change', cargarEstadoFixture);
+    document.getElementById('fixtureCategoria')?.addEventListener('change', cargarEstadoFixture);
+
+    // Inicializar
+    cargarPartidos();
+
+    function cargarPartidos() {
+        fetch('/partidos/api/partidos/')
+            .then(response => response.json())
+            .then(data => {
+                partidos = data;
+                aplicarFiltros();
+            })
+            .catch(error => {
+                console.error('Error al cargar partidos:', error);
+                mostrarMensaje('Error al cargar partidos', 'error');
+            });
+    }
+
+    function aplicarFiltros() {
+        const filtroEstado = document.getElementById('filtroEstado').value;
+        const filtroDisciplina = document.getElementById('filtroDisciplina').value;
+        const filtroCategoria = document.getElementById('filtroCategoria').value;
+
+        let partidosFiltrados = partidos.filter(partido => {
+            return (!filtroEstado || partido.estado === filtroEstado) &&
+                   (!filtroDisciplina || partido.disciplina.id == filtroDisciplina) &&
+                   (!filtroCategoria || partido.categoria === filtroCategoria);
+        });
+
+        mostrarPartidos(partidosFiltrados);
+        document.getElementById('partidosEncontrados').textContent = `${partidosFiltrados.length} partidos encontrados`;
+    }
+
+    function mostrarPartidos(partidosArray) {
+        const container = document.getElementById('partidosContainer');
+        
+        if (partidosArray.length === 0) {
+            container.innerHTML = '<div class="text-center"><p class="lead">No hay partidos que mostrar</p></div>';
+            return;
+        }
+
+        let html = '';
+        partidosArray.forEach(partido => {
+            const logoA = partido.equipo_a.logo ? partido.equipo_a.logo : '/static/images/default-team.svg';
+            const logoB = partido.equipo_b.logo ? partido.equipo_b.logo : '/static/images/default-team.svg';
+            
+            let estadoClass = `estado-${partido.estado}`;
+            let estadoTexto = partido.estado.charAt(0).toUpperCase() + partido.estado.slice(1).replace('_', ' ');
+            
+            let resultadoHtml = '';
+            if (partido.estado === 'finalizado' && partido.resultado) {
+                resultadoHtml = `<div class="resultado mt-2"><strong>Resultado: ${partido.resultado}</strong></div>`;
+            }
+
+            html += `
+                <div class="partido-card">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <small class="text-muted">${partido.disciplina.nombre} - ${partido.categoria}</small>
+                        {% if is_admin %}
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="editarPartido(${partido.id})">
+                                    <i class="fas fa-edit me-2"></i>Editar
+                                </a></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="eliminarPartido(${partido.id})">
+                                    <i class="fas fa-trash me-2"></i>Eliminar
+                                </a></li>
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="vs-container">
+                        <div class="equipo">
+                            <img src="${logoA}" alt="${partido.equipo_a.nombre}" class="equipo-logo">
+                            <div class="equipo-nombre"><strong>${partido.equipo_a.nombre}</strong></div>
+                        </div>
+                        <div class="vs-text">VS</div>
+                        <div class="equipo">
+                            <img src="${logoB}" alt="${partido.equipo_b.nombre}" class="equipo-logo">
+                            <div class="equipo-nombre"><strong>${partido.equipo_b.nombre}</strong></div>
+                        </div>
+                    </div>
+                    
+                    ${resultadoHtml}
+                    
+                    <div class="partido-info">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-calendar me-2"></i>${partido.fecha}</span>
+                            <span class="estado-badge ${estadoClass}">${estadoTexto}</span>
+                        </div>
+                        <div class="mt-1">
+                            <span><i class="fas fa-clock me-2"></i>${partido.hora}</span>
+                        </div>
+                        ${partido.lugar ? `<div class="mt-1"><span><i class="fas fa-map-marker-alt me-2"></i>${partido.lugar}</span></div>` : ''}
+                        ${partido.jornada ? `<div class="mt-1"><small class="text-muted">Jornada ${partido.jornada}</small></div>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }    function prepararGenerarFixture() {
+        // Limpiar formulario
+        document.getElementById('generarFixtureForm').reset();
+        
+        // Establecer fecha mínima como hoy
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('fechaPartido').min = hoy;
+        
+        // Ocultar estado del fixture inicialmente
+        document.getElementById('estadoFixtureInfo').style.display = 'none';
+        
+        const modal = new bootstrap.Modal(document.getElementById('generarFixtureModal'));
+        modal.show();
+    }
+
+    function cargarEstadoFixture() {
+        const disciplinaId = document.getElementById('fixtureDisciplina').value;
+        const categoria = document.getElementById('fixtureCategoria').value;
+        
+        if (!disciplinaId || !categoria) {
+            document.getElementById('estadoFixtureInfo').style.display = 'none';
+            return;
+        }
+        
+        fetch(`/partidos/api/estado-fixture/?disciplina_id=${disciplinaId}&categoria=${categoria}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('estadoFixtureInfo').style.display = 'none';
+                    console.error('Error al cargar estado:', data.error);
+                    return;
+                }
+                
+                // Mostrar información del estado del fixture
+                const estadoDiv = document.getElementById('estadoFixtureContent');
+                
+                if (data.fixture_completo) {
+                    estadoDiv.innerHTML = `
+                        <div class="text-warning">
+                            <strong>⚠️ Fixture Completo</strong><br>
+                            El fixture para <strong>${data.disciplina}</strong> - <strong>${data.categoria}</strong> ya está completo.<br>
+                            Jornadas: ${data.jornadas_generadas}/${data.total_jornadas_teoricas} | Partidos: ${data.total_partidos}
+                        </div>
+                    `;
+                    document.getElementById('generarFixtureSubmitBtn').disabled = true;
+                    document.getElementById('generarFixtureSubmitBtn').textContent = 'Fixture Completo';
+                } else if (data.fixture_existe) {
+                    estadoDiv.innerHTML = `
+                        <div class="text-info">
+                            <strong>📊 Fixture en Progreso</strong><br>
+                            <strong>${data.disciplina}</strong> - <strong>${data.categoria}</strong><br>
+                            Equipos: ${data.num_equipos} | Próxima jornada: <strong>${data.siguiente_jornada}</strong><br>
+                            Jornadas: ${data.jornadas_generadas}/${data.total_jornadas_teoricas} | Partidos creados: ${data.total_partidos}
+                        </div>
+                    `;
+                    document.getElementById('generarFixtureSubmitBtn').disabled = false;
+                    document.getElementById('generarFixtureSubmitBtn').textContent = `Generar Jornada ${data.siguiente_jornada}`;
+                } else {
+                    estadoDiv.innerHTML = `
+                        <div class="text-success">
+                            <strong>🆕 Nuevo Fixture</strong><br>
+                            <strong>${data.disciplina}</strong> - <strong>${data.categoria}</strong><br>
+                            Equipos registrados: ${data.num_equipos}<br>
+                            Total de jornadas a generar: ${data.total_jornadas_teoricas}
+                        </div>
+                    `;
+                    document.getElementById('generarFixtureSubmitBtn').disabled = false;
+                    document.getElementById('generarFixtureSubmitBtn').textContent = 'Generar Jornada 1';
+                }
+                
+                document.getElementById('estadoFixtureInfo').style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error al cargar estado del fixture:', error);
+                document.getElementById('estadoFixtureInfo').style.display = 'none';
+            });
+    }
+
+    function prepararNuevoPartido() {
+        // Limpiar formulario
+        document.getElementById('nuevoPartidoForm').reset();
+        
+        // Establecer fecha mínima como hoy
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('fechaPartido').min = hoy;
+        
+        const modal = new bootstrap.Modal(document.getElementById('nuevoPartidoModal'));
+        modal.show();
+    }
+
+    function cargarEquiposPorDisciplina() {
+        const disciplinaId = document.getElementById('partidoDisciplina').value;
+        const categoria = document.getElementById('partidoCategoria').value;
+        
+        const equipoASelect = document.getElementById('equipoA');
+        const equipoBSelect = document.getElementById('equipoB');
+        
+        // Limpiar selects
+        equipoASelect.innerHTML = '<option value="">Seleccionar equipo</option>';
+        equipoBSelect.innerHTML = '<option value="">Seleccionar equipo</option>';
+        
+        if (!disciplinaId || !categoria) return;
+        
+        fetch(`/partidos/api/equipos-disciplina/${disciplinaId}/?categoria=${categoria}`)
+            .then(response => response.json())
+            .then(equipos => {
+                equipos.forEach(equipo => {
+                    const option = `<option value="${equipo.id}">${equipo.nombre}</option>`;
+                    equipoASelect.innerHTML += option;
+                    equipoBSelect.innerHTML += option;
+                });
+            })
+            .catch(error => {
+                console.error('Error al cargar equipos:', error);
+            });
+    }    function generarFixture() {
+        const form = document.getElementById('generarFixtureForm');
+        const formData = new FormData(form);
+        
+        // Obtener sedes seleccionadas
+        const sedesSeleccionadas = [];
+        document.querySelectorAll('input[name="sedes"]:checked').forEach(checkbox => {
+            sedesSeleccionadas.push(checkbox.value);
+        });
+        
+        if (sedesSeleccionadas.length === 0) {
+            alert('Debe seleccionar al menos una sede');
+            return;
+        }
+        
+        const data = {
+            disciplina_id: formData.get('disciplina_id'),
+            categoria: formData.get('categoria'),
+            fecha_partido: formData.get('fecha_partido'),
+            hora_inicio: formData.get('hora_inicio'),
+            hora_fin: formData.get('hora_fin'),
+            duracion_partido: parseInt(formData.get('duracion_partido')),
+            descanso_partidos: parseInt(formData.get('descanso_partidos')),
+            sedes: sedesSeleccionadas
+        };
+        
+        // Deshabilitar botón mientras se procesa
+        const submitBtn = document.getElementById('generarFixtureSubmitBtn');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Generando...';
+        
+        fetch('/partidos/api/generar-fixture/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            bootstrap.Modal.getInstance(document.getElementById('generarFixtureModal')).hide();
+            
+            let mensaje = `✅ ${data.message}`;
+            if (data.partidos_creados > 0) {
+                mensaje += `\n📊 Partidos creados: ${data.partidos_creados}`;
+                mensaje += `\n📅 Fecha: ${data.fecha_partidos}`;
+                if (data.jornadas_restantes > 0) {
+                    mensaje += `\n⏳ Jornadas restantes: ${data.jornadas_restantes}`;
+                } else {
+                    mensaje += `\n🏆 ¡Fixture completo!`;
+                }
+            }
+            
+            mostrarMensaje(mensaje, 'success');
+            cargarPartidos();
+        })
+        .catch(error => {
+            console.error('Error al generar fixture:', error);
+            alert('Error: ' + error.message);
+        })
+        .finally(() => {
+            // Rehabilitar botón
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        });
+    }
+
+    function crearPartido() {
+        const form = document.getElementById('nuevoPartidoForm');
+        const formData = new FormData(form);
+        
+        const data = {
+            equipo_a_id: formData.get('equipo_a_id'),
+            equipo_b_id: formData.get('equipo_b_id'),
+            fecha: formData.get('fecha'),
+            hora: formData.get('hora'),
+            lugar: formData.get('lugar')
+        };
+        
+        fetch('/partidos/api/partidos/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            bootstrap.Modal.getInstance(document.getElementById('nuevoPartidoModal')).hide();
+            mostrarMensaje('Partido creado correctamente', 'success');
+            cargarPartidos();
+        })
+        .catch(error => {
+            console.error('Error al crear partido:', error);
+            alert('Error: ' + error.message);
+        });
+    }
+
+    function editarPartido(partidoId) {
+        const partido = partidos.find(p => p.id === partidoId);
+        if (!partido) return;
+        
+        currentEditingPartidoId = partidoId;
+        
+        document.getElementById('editPartidoId').value = partidoId;
+        document.getElementById('editFechaPartido').value = partido.fecha;
+        document.getElementById('editHoraPartido').value = partido.hora;
+        document.getElementById('editLugarPartido').value = partido.lugar || '';
+        document.getElementById('editEstadoPartido').value = partido.estado;
+        document.getElementById('editGolesEquipoA').value = partido.goles_equipo_a || 0;
+        document.getElementById('editGolesEquipoB').value = partido.goles_equipo_b || 0;
+        
+        toggleResultadoSection();
+        
+        const modal = new bootstrap.Modal(document.getElementById('editarPartidoModal'));
+        modal.show();
+    }
+
+    function toggleResultadoSection() {
+        const estado = document.getElementById('editEstadoPartido').value;
+        const resultadoSection = document.getElementById('resultadoSection');
+        
+        if (estado === 'finalizado') {
+            resultadoSection.style.display = 'block';
+        } else {
+            resultadoSection.style.display = 'none';
+        }
+    }
+
+    function actualizarPartido() {
+        const partidoId = currentEditingPartidoId;
+        if (!partidoId) return;
+        
+        const data = {
+            fecha: document.getElementById('editFechaPartido').value,
+            hora: document.getElementById('editHoraPartido').value,
+            lugar: document.getElementById('editLugarPartido').value,
+            estado: document.getElementById('editEstadoPartido').value,
+            goles_equipo_a: parseInt(document.getElementById('editGolesEquipoA').value) || 0,
+            goles_equipo_b: parseInt(document.getElementById('editGolesEquipoB').value) || 0
+        };
+        
+        fetch(`/partidos/api/partidos/${partidoId}/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            bootstrap.Modal.getInstance(document.getElementById('editarPartidoModal')).hide();
+            mostrarMensaje('Partido actualizado correctamente', 'success');
+            cargarPartidos();
+        })
+        .catch(error => {
+            console.error('Error al actualizar partido:', error);
+            alert('Error: ' + error.message);
+        });
+    }
+
+    function eliminarPartido(partidoId) {
+        if (!confirm('¿Estás seguro de que quieres eliminar este partido?')) return;
+        
+        fetch(`/partidos/api/partidos/${partidoId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            mostrarMensaje('Partido eliminado correctamente', 'success');
+            cargarPartidos();
+        })
+        .catch(error => {
+            console.error('Error al eliminar partido:', error);
+            alert('Error: ' + error.message);
+        });
+    }
+
+    function mostrarMensaje(mensaje, tipo) {
+        const messageDiv = document.getElementById('partidosMessage');
+        const alertClass = tipo === 'success' ? 'alert-success' : 'alert-danger';
+        
+        messageDiv.innerHTML = `<div class="alert ${alertClass}">${mensaje}</div>`;
+        
+        setTimeout(() => {
+            messageDiv.innerHTML = '';
+        }, 5000);
+    }
+
+    // Hacer funciones disponibles globalmente
+    window.editarPartido = editarPartido;
+    window.eliminarPartido = eliminarPartido;
+});
+</script>
+{% endblock %}

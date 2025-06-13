@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'usuarios',  # Nuestra app de usuarios
+    'partidos',  # Nuestra app de partidos
     'rest_framework',  # Django REST Framework
     'rest_framework_simplejwt',  # JWT Authentication
     'drf_yasg',  # Swagger documentation

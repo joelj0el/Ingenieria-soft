@@ -35,6 +35,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin-django/', admin.site.urls),  # Cambiamos la URL del admin de Django
     path('usuarios/', include('usuarios.urls')),
+    path('partidos/', include('partidos.urls')),  # URLs de partidos
     path('', TemplateView.as_view(template_name='home.html'), name='home'),
     
     # Nueva API REST usando ViewSets
