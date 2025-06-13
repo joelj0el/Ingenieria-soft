@@ -28,9 +28,8 @@ urlpatterns = [
     # URLs para administrar administrativos (solo admins)
     path('api/administrativos/', views.AdministrativosView.as_view(), name='api_administrativos'),
     path('api/administrativos/<int:pk>/', views.AdministrativosView.as_view(), name='api_administrativo_detalle'),
-    
-    # URL para obtener carreras
-    path('api/carreras/', views.CarreraAPIView.as_view(), name='api_carreras'),
+      # URL para obtener carreras (cambiar a equipos_views para consistencia)
+    path('api/carreras/', equipos_views.CarrerasAPIView.as_view(), name='api_carreras'),
     
     # URLs para el panel de administración
     path('admin/', views.AdminPanelView.as_view(), name='admin_panel'),
@@ -46,12 +45,13 @@ urlpatterns = [
     
     # URLs para la API REST de disciplinas
     path('api/disciplinas/', equipos_views.DisciplinasAPIView.as_view(), name='api_disciplinas'),
-    path('api/disciplinas/<int:disciplina_id>/', equipos_views.DisciplinaDetailAPIView.as_view(), name='api_disciplina_detail'),
-    
-    # URLs para la API REST de equipos
+    path('api/disciplinas/<int:disciplina_id>/', equipos_views.DisciplinaDetailAPIView.as_view(), name='api_disciplina_detail'),    # URLs para la API REST de equipos
     path('api/equipos/', equipos_views.EquiposAPIView.as_view(), name='api_equipos'),
     path('api/equipos/<int:equipo_id>/', equipos_views.EquipoDetailAPIView.as_view(), name='api_equipo_detail'),
     path('api/jugadores-disponibles/<int:disciplina_id>/', equipos_views.JugadoresDisponiblesAPIView.as_view(), name='api_jugadores_disponibles'),
+    
+    # URLs para búsqueda de usuarios
+    path('api/buscar-usuarios/', equipos_views.BuscarUsuariosAPIView.as_view(), name='api_buscar_usuarios'),
     
     # URL para la vista de equipos
     path('teams/', views.TeamsView.as_view(), name='teams'),

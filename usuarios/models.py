@@ -68,8 +68,17 @@ class Disciplina(models.Model):
     
 # Modelo para almacenar equipos
 class Equipo(models.Model):
+    CATEGORIA_CHOICES = [
+        ('masculino', 'Masculino'),
+        ('femenino', 'Femenino'),
+        ('mixto', 'Mixto'),
+    ]
+    
     nombre = models.CharField(max_length=100, unique=True)
+    carrera = models.ForeignKey(Carrera, on_delete=models.CASCADE, related_name='equipos', null=True, blank=True)
     disciplina = models.ForeignKey(Disciplina, on_delete=models.CASCADE, related_name='equipos')
+    categoria = models.CharField(max_length=10, choices=CATEGORIA_CHOICES, default='mixto')
+    capitan = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='equipos_capitaneados')
     descripcion = models.TextField(blank=True)
     logo = models.ImageField(upload_to='equipos/', blank=True, null=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)

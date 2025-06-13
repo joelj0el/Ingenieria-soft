@@ -70,10 +70,12 @@
                 <div class="row">
                     <div class="col-md-4 text-center mb-3">
                         <img id="teamLogoDetail" src="" alt="Logo del equipo" class="img-fluid team-logo-detail">
-                    </div>
-                    <div class="col-md-8">
+                    </div>                    <div class="col-md-8">
                         <h3 id="teamNameDetail"></h3>
+                        <p><strong>Carrera:</strong> <span id="teamCarreraDetail"></span></p>
                         <p><strong>Disciplina:</strong> <span id="teamDisciplinaDetail"></span></p>
+                        <p><strong>Categoría:</strong> <span id="teamCategoriaDetail"></span></p>
+                        <p><strong>Capitán:</strong> <span id="teamCapitanDetail"></span></p>
                         <p><strong>Descripción:</strong> <span id="teamDescripcionDetail"></span></p>
                         <p><strong>Fecha de Registro:</strong> <span id="teamFechaDetail"></span></p>
                     </div>
@@ -114,8 +116,7 @@
             <div class="modal-header">
                 <h5 class="modal-title" id="addEditTeamModalLabel">Nuevo Equipo</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
+            </div>            <div class="modal-body">
                 <form id="addEditTeamForm" enctype="multipart/form-data">
                     <input type="hidden" id="editTeamId" name="editTeamId">
                     
@@ -124,10 +125,42 @@
                         <input type="text" class="form-control" id="teamName" name="nombre" required>
                     </div>
                     
+                    <div class="row">
+                        <div class="col-md-6">                            <div class="mb-3">
+                                <label for="teamCarrera" class="form-label">Carrera del Equipo</label>
+                                <select class="form-select" id="teamCarrera" name="carrera_id" required>
+                                    <option value="">Seleccionar carrera</option>
+                                    <!-- Las carreras se cargarán dinámicamente -->
+                                </select>
+                                <small class="text-muted">Esta carrera es solo informativa. Los jugadores pueden ser de cualquier carrera.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="teamDisciplina" class="form-label">Disciplina</label>
+                                <select class="form-select" id="teamDisciplina" name="disciplina_id" required>
+                                    <option value="">Seleccionar disciplina</option>
+                                    <!-- Las disciplinas se cargarán dinámicamente -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="mb-3">
-                        <label for="teamDisciplina" class="form-label">Disciplina</label>
-                        <select class="form-select" id="teamDisciplina" name="disciplina_id" required>
-                            <!-- Las disciplinas se cargarán dinámicamente -->
+                        <label for="teamCategoria" class="form-label">Categoría</label>
+                        <select class="form-select" id="teamCategoria" name="categoria" required>
+                            <option value="">Seleccionar categoría</option>
+                            <option value="masculino">Masculino</option>
+                            <option value="femenino">Femenino</option>
+                            <option value="mixto">Mixto</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="teamCapitan" class="form-label">Capitán</label>
+                        <select class="form-select" id="teamCapitan" name="capitan_id">
+                            <option value="">Seleccionar capitán</option>
+                            <!-- Los capitanes se cargarán dinámicamente -->
                         </select>
                     </div>
                     
@@ -143,13 +176,28 @@
                             <img id="logoPreviewImage" src="" alt="Vista previa del logo" class="img-fluid" style="max-height: 100px;">
                         </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="teamJugadores" class="form-label">Jugadores</label>
-                        <select class="form-select" id="teamJugadores" name="jugadores[]" multiple size="5">
-                            <!-- Los jugadores disponibles se cargarán dinámicamente -->
-                        </select>
-                        <small class="form-text text-muted">Mantén presionada la tecla Ctrl para seleccionar múltiples jugadores.</small>
+                      <div class="mb-3">
+                        <label for="jugadoresBuscador" class="form-label">Buscar Jugadores</label>
+                        <small class="text-muted d-block mb-2">
+                            <i class="fas fa-info-circle"></i> 
+                            Cualquier usuario puede participar independientemente de su carrera o rol. 
+                            Solo no se puede estar en dos equipos de la misma disciplina.
+                        </small>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" id="jugadoresBuscador" placeholder="Buscar por nombre, usuario o email...">
+                            <button class="btn btn-outline-secondary" type="button" id="buscarJugadoresBtn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <div id="jugadoresResultados" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                            <!-- Los resultados de búsqueda aparecerán aquí -->
+                        </div>
+                        <div id="jugadoresSeleccionados" class="mt-2">
+                            <h6>Jugadores Seleccionados:</h6>
+                            <div id="listaJugadoresSeleccionados">
+                                <!-- Los jugadores seleccionados aparecerán aquí -->
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -333,6 +381,32 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
+    // Cargar todas las carreras
+    function cargarCarreras() {
+        fetch('/usuarios/api/carreras/')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al cargar carreras: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const selectCarrera = document.getElementById('teamCarrera');
+                if (selectCarrera) {
+                    selectCarrera.innerHTML = '<option value="">Seleccionar carrera</option>';
+                    data.forEach(carrera => {
+                        const option = document.createElement('option');
+                        option.value = carrera.id;
+                        option.textContent = carrera.nombre;
+                        selectCarrera.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar carreras:', error);
+            });
+    }
+    
     // Cargar todos los equipos
     function cargarEquipos() {
         const teamsContainer = document.getElementById('teamsContainer');
@@ -472,10 +546,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error('Error al cargar detalles del equipo: ' + response.status);
                 }
                 return response.json();
-            })
-            .then(equipo => {
+            })            .then(equipo => {
                 document.getElementById('teamNameDetail').textContent = equipo.nombre;
+                document.getElementById('teamCarreraDetail').textContent = equipo.carrera ? equipo.carrera.nombre : 'No especificada';
                 document.getElementById('teamDisciplinaDetail').textContent = equipo.disciplina.nombre;
+                document.getElementById('teamCategoriaDetail').textContent = equipo.categoria || 'No especificada';
+                document.getElementById('teamCapitanDetail').textContent = equipo.capitan ? equipo.capitan.nombre : 'No asignado';
                 document.getElementById('teamDescripcionDetail').textContent = equipo.descripcion || 'Sin descripción';
                 document.getElementById('teamFechaDetail').textContent = equipo.fecha_registro;
                 
@@ -578,8 +654,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 jugadoresSelect.innerHTML = '<option disabled>Error al cargar jugadores</option>';
             });
     }
-    
-    // Preparar formulario para editar un equipo
+      // Preparar formulario para editar un equipo
     function prepararEdicionEquipo(equipo) {
         currentEditingTeamId = equipo.id;
         document.getElementById('addEditTeamModalLabel').textContent = 'Editar Equipo';
@@ -587,6 +662,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('teamName').value = equipo.nombre;
         document.getElementById('teamDescripcion').value = equipo.descripcion || '';
         
+        // Seleccionar disciplina
         const selectDisciplina = document.getElementById('teamDisciplina');
         for (let i = 0; i < selectDisciplina.options.length; i++) {
             if (selectDisciplina.options[i].value == equipo.disciplina.id) {
@@ -595,8 +671,74 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Cargar jugadores disponibles y seleccionar los actuales
-        cargarJugadoresDisponibles(equipo.disciplina.id, equipo.id);
+        // Seleccionar carrera
+        if (equipo.carrera) {
+            const selectCarrera = document.getElementById('teamCarrera');
+            for (let i = 0; i < selectCarrera.options.length; i++) {
+                if (selectCarrera.options[i].value == equipo.carrera.id) {
+                    selectCarrera.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        // Seleccionar categoría
+        if (equipo.categoria) {
+            const selectCategoria = document.getElementById('teamCategoria');
+            for (let i = 0; i < selectCategoria.options.length; i++) {
+                if (selectCategoria.options[i].value == equipo.categoria) {
+                    selectCategoria.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+          // Obtener y cargar jugadores actuales del equipo
+        fetch(`/usuarios/api/equipos/${equipo.id}/`)
+            .then(response => response.json())
+            .then(equipoData => {
+                console.log('Datos del equipo cargados:', equipoData);
+                
+                // Transformar jugadores al formato esperado
+                jugadoresSeleccionados = equipoData.jugadores.map(jugador => ({
+                    id: jugador.id,
+                    nombre: jugador.nombre,
+                    email: jugador.email,
+                    carrera: jugador.carrera || 'Sin carrera',
+                    username: jugador.username || jugador.email.split('@')[0], // Generar username si no existe
+                    rol: 'Sin rol', // Valor por defecto
+                    disponible: true, // Los jugadores ya en el equipo están "disponibles" para el equipo actual
+                    mensaje_estado: 'Disponible'
+                }));
+                
+                console.log('Jugadores seleccionados:', jugadoresSeleccionados);
+                
+                // Actualizar la lista de jugadores seleccionados
+                actualizarJugadoresSeleccionados();
+                
+                // Actualizar capitanes disponibles
+                actualizarCapitanesDisponibles();
+                
+                // Seleccionar capitán si existe
+                if (equipo.capitan) {
+                    // Esperar un momento para que se carguen los capitanes disponibles
+                    setTimeout(() => {
+                        const selectCapitan = document.getElementById('teamCapitan');
+                        for (let i = 0; i < selectCapitan.options.length; i++) {
+                            if (selectCapitan.options[i].value == equipo.capitan.id) {
+                                selectCapitan.selectedIndex = i;
+                                break;
+                            }
+                        }
+                    }, 100);
+                }
+                
+                // Cargar usuarios disponibles para mostrar estado de disponibilidad
+                buscarUsuarios('', '');
+            })
+            .catch(error => {
+                console.error('Error al cargar datos del equipo:', error);
+                alert('Error al cargar los datos del equipo: ' + error.message);
+            });
         
         // Mostrar vista previa del logo si existe
         if (equipo.logo) {
@@ -608,74 +750,130 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const addEditTeamModal = new bootstrap.Modal(document.getElementById('addEditTeamModal'));
         addEditTeamModal.show();
-    }
-    
-    // Guardar un equipo (crear o actualizar)
+    }    // Guardar un equipo (crear o actualizar)
     function guardarEquipo(event) {
         event.preventDefault();
         
-        const formData = new FormData(document.getElementById('addEditTeamForm'));
         const equipoId = document.getElementById('editTeamId').value;
         const isEdit = equipoId !== '';
         
-        // Obtener los jugadores seleccionados
-        const jugadoresSelect = document.getElementById('teamJugadores');
-        const jugadoresSeleccionados = Array.from(jugadoresSelect.selectedOptions).map(option => option.value);
-        
-        // Limpiar formulario de jugadores y añadirlos nuevamente
-        formData.delete('jugadores[]'); // Eliminar entrada anterior si existe
-        jugadoresSeleccionados.forEach(jugadorId => {
-            formData.append('jugadores[]', jugadorId);
-        });
+        console.log('Guardando equipo - isEdit:', isEdit, 'equipoId:', equipoId);
+        console.log('Jugadores seleccionados:', jugadoresSeleccionados);
         
         let url = isEdit ? `/usuarios/api/equipos/${equipoId}/` : '/usuarios/api/equipos/';
         let method = isEdit ? 'PUT' : 'POST';
         
-        fetch(url, {
-            method: method,
-            headers: {
-                'X-CSRFToken': csrfToken
-            },
-            body: formData
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || 'Error al guardar el equipo');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Cerrar modal
-            bootstrap.Modal.getInstance(document.getElementById('addEditTeamModal')).hide();
+        if (isEdit) {
+            // Para PUT, enviar como JSON
+            const formData = {
+                nombre: document.getElementById('teamName').value,
+                descripcion: document.getElementById('teamDescripcion').value,
+                disciplina_id: document.getElementById('teamDisciplina').value,
+                carrera_id: document.getElementById('teamCarrera').value,
+                categoria: document.getElementById('teamCategoria').value,
+                capitan_id: document.getElementById('teamCapitan').value || '',
+                jugadores: jugadoresSeleccionados.map(jugador => jugador.id)
+            };
             
-            // Mostrar mensaje de éxito
-            const mensaje = isEdit ? 'Equipo actualizado correctamente' : 'Equipo creado correctamente';
-            document.getElementById('teamsMessage').innerHTML = `<div class="alert alert-success">${mensaje}</div>`;
+            console.log('Enviando datos para PUT:', formData);
             
-            // Resetear variables globales
-            currentEditingTeamId = null;
-            
-            // Recargar datos completos (disciplinas y equipos)
-            if (isEdit) {
-                // Si estamos editando, es posible que haya cambiado la disciplina, así que recargamos todo
-                cargarDisciplinas();
-                setTimeout(() => {
-                    cargarEquipos();
-                }, 500);
-            } else {
-                // Si es nuevo, solo recargamos equipos
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                console.log('Respuesta del servidor:', response.status, response.statusText);
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        console.error('Error del servidor:', data);
+                        throw new Error(data.error || 'Error al actualizar el equipo');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Equipo actualizado exitosamente:', data);
+                
+                // Cerrar modal
+                bootstrap.Modal.getInstance(document.getElementById('addEditTeamModal')).hide();
+                
+                // Mostrar mensaje de éxito
+                document.getElementById('teamsMessage').innerHTML = '<div class="alert alert-success">Equipo actualizado correctamente</div>';
+                
+                // Resetear variables globales
+                currentEditingTeamId = null;
+                jugadoresSeleccionados = []; // Limpiar jugadores seleccionados
+                
+                // Recargar datos
                 cargarEquipos();
+                cargarDisciplinas();
+            })
+            .catch(error => {
+                console.error('Error al actualizar equipo:', error);
+                alert('Error: ' + error.message);
+            });
+        } else {
+            // Para POST, usar FormData (para subir archivos)
+            const formData = new FormData(document.getElementById('addEditTeamForm'));
+            
+            // Agregar los jugadores seleccionados al FormData
+            formData.delete('jugadores[]');
+            jugadoresSeleccionados.forEach(jugador => {
+                formData.append('jugadores[]', jugador.id);
+                console.log('Agregando jugador:', jugador.id, jugador.nombre);
+            });
+            
+            // Mostrar todos los datos del FormData para depuración
+            console.log('Datos del FormData:');
+            for (let [key, value] of formData.entries()) {
+                console.log(key, value);
             }
-        })
-        .catch(error => {
-            console.error('Error al guardar equipo:', error);
-            alert('Error: ' + error.message);
-        });
+            
+            fetch(url, {
+                method: method,
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            })
+            .then(response => {
+                console.log('Respuesta del servidor:', response.status, response.statusText);
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        console.error('Error del servidor:', data);
+                        throw new Error(data.error || 'Error al crear el equipo');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Equipo creado exitosamente:', data);
+                
+                // Cerrar modal
+                bootstrap.Modal.getInstance(document.getElementById('addEditTeamModal')).hide();
+                
+                // Mostrar mensaje de éxito
+                document.getElementById('teamsMessage').innerHTML = '<div class="alert alert-success">Equipo creado correctamente</div>';
+                
+                // Resetear variables globales
+                currentEditingTeamId = null;
+                jugadoresSeleccionados = []; // Limpiar jugadores seleccionados
+                
+                // Recargar datos
+                cargarEquipos();
+                cargarDisciplinas();
+            })
+            .catch(error => {
+                console.error('Error al crear equipo:', error);
+                alert('Error: ' + error.message);
+            });
+        }
     }
-    
-    // Eliminar un equipo
+      // Eliminar un equipo
     function eliminarEquipo(event) {
         event.preventDefault();
         
@@ -703,7 +901,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
             return response.json();
-        })        .then(data => {
+        })
+        .then(data => {
             // Limpiar el campo de contraseña
             document.getElementById('confirmTeamPassword').value = '';
             
@@ -715,14 +914,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Recargar datos
             cargarEquipos();
-        })        .catch(error => {
-            console.error('Error al eliminar equipo:', error);
-            // Limpiar el campo de contraseña incluso en caso de error
+        })
+        .catch(error => {
+            console.error('Error al eliminar equipo:', error);            // Limpiar el campo de contraseña incluso en caso de error
             document.getElementById('confirmTeamPassword').value = '';
             alert('Error: ' + error.message);
         });
     }
-    
+
     // Preparar formulario para crear una nueva disciplina
     function prepararNuevaDisciplina() {
         document.getElementById('addEditDisciplinaModalLabel').textContent = 'Nueva Disciplina';
@@ -777,9 +976,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error al guardar disciplina:', error);
             alert('Error: ' + error.message);
         });
-    }
-    
-    // Preparar formulario para crear un nuevo equipo
+    }    // Preparar formulario para crear un nuevo equipo
     function prepararNuevoEquipo() {
         currentEditingTeamId = null;
         document.getElementById('addEditTeamModalLabel').textContent = 'Nuevo Equipo';
@@ -787,77 +984,235 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('addEditTeamForm').reset();
         document.getElementById('teamLogoPreview').classList.add('d-none');
         
-        // Cargar jugadores disponibles para la disciplina seleccionada
-        const disciplinaId = document.getElementById('teamDisciplina').value;
-        if (disciplinaId) {
-            cargarJugadoresDisponibles(disciplinaId);
-        }
+        // Limpiar jugadores seleccionados
+        jugadoresSeleccionados = [];
+        actualizarJugadoresSeleccionados();
+        document.getElementById('jugadoresResultados').innerHTML = '';
+        document.getElementById('jugadoresBuscador').value = '';
+        
+        // Cargar datos necesarios
+        cargarCarreras();
+        cargarDisciplinas();
+        
+        // Cargar usuarios iniciales para mostrar
+        buscarUsuarios('', '');
         
         const addEditTeamModal = new bootstrap.Modal(document.getElementById('addEditTeamModal'));
         addEditTeamModal.show();
     }
     
-    // Cuando cambia la disciplina, cargar jugadores disponibles
-    if (document.getElementById('teamDisciplina')) {
-        document.getElementById('teamDisciplina').addEventListener('change', function() {
-            cargarJugadoresDisponibles(this.value, currentEditingTeamId);
+    // Variables para el manejo de jugadores
+    let jugadoresSeleccionados = [];
+    let busquedaTimeout;    // Buscar usuarios/jugadores
+    function buscarUsuarios(query = '', carreraId = '') {
+        clearTimeout(busquedaTimeout);
+        
+        // Mostrar indicador de carga
+        document.getElementById('jugadoresResultados').innerHTML = 
+            '<div class="text-center p-3"><div class="spinner-border spinner-border-sm" role="status"></div> Buscando usuarios...</div>';
+        
+        busquedaTimeout = setTimeout(() => {
+            const params = new URLSearchParams();
+            if (query) params.append('q', query);
+            if (carreraId) params.append('carrera_id', carreraId);
+            
+            // Agregar disciplina_id para verificar disponibilidad
+            const disciplinaId = document.getElementById('teamDisciplina')?.value;
+            if (disciplinaId) params.append('disciplina_id', disciplinaId);
+            
+            fetch(`/usuarios/api/buscar-usuarios/?${params.toString()}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al buscar usuarios: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    mostrarResultadosBusqueda(data);
+                })
+                .catch(error => {
+                    console.error('Error al buscar usuarios:', error);
+                    document.getElementById('jugadoresResultados').innerHTML = 
+                        '<div class="text-danger p-2">Error al buscar usuarios</div>';
+                });
+        }, 300);
+    }
+      // Mostrar resultados de búsqueda de usuarios
+    function mostrarResultadosBusqueda(usuarios) {
+        const resultadosDiv = document.getElementById('jugadoresResultados');
+        if (usuarios.length === 0) {
+            resultadosDiv.innerHTML = '<div class="text-muted">No se encontraron usuarios</div>';
+            return;
+        }
+        
+        let html = '';
+        usuarios.forEach(usuario => {
+            const isSelected = jugadoresSeleccionados.some(j => j.id === usuario.id);
+            const isDisabled = !usuario.disponible && !isSelected; // Solo deshabilitar si no está disponible Y no está ya seleccionado
+            
+            html += `
+                <div class="usuario-resultado p-2 border-bottom ${isSelected ? 'bg-success bg-opacity-25' : ''} ${isDisabled ? 'opacity-50' : ''}" 
+                     data-usuario-id="${usuario.id}" style="cursor: ${isDisabled ? 'not-allowed' : 'pointer'};">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${usuario.nombre}</strong>
+                            <small class="text-muted d-block">${usuario.email}</small>
+                            <small class="text-info d-block">${usuario.carrera}</small>
+                            <div class="d-flex gap-2 align-items-center mt-1">
+                                ${usuario.rol ? `<small class="badge bg-secondary">${usuario.rol}</small>` : ''}
+                                ${!usuario.disponible ? 
+                                    `<small class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> ${usuario.mensaje_estado}</small>` : 
+                                    `<small class="badge bg-success"><i class="fas fa-check"></i> ${usuario.mensaje_estado}</small>`
+                                }
+                            </div>
+                        </div>
+                        <div>
+                            ${isSelected ? 
+                                '<i class="fas fa-check-circle text-success"></i>' : 
+                                (isDisabled ? '<i class="fas fa-ban text-warning"></i>' : '<i class="fas fa-plus-circle text-primary"></i>')
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        resultadosDiv.innerHTML = html;
+        
+        // Agregar event listeners para seleccionar/deseleccionar usuarios
+        document.querySelectorAll('.usuario-resultado').forEach(elemento => {
+            elemento.addEventListener('click', function() {
+                const usuarioId = parseInt(this.dataset.usuarioId);
+                const usuario = usuarios.find(u => u.id === usuarioId);
+                
+                // Prevenir seleccionar usuarios no disponibles (a menos que ya estén seleccionados)
+                const isSelected = jugadoresSeleccionados.some(j => j.id === usuarioId);
+                if (!usuario.disponible && !isSelected) {
+                    return; // No permitir seleccionar
+                }
+                
+                if (isSelected) {
+                    // Deseleccionar
+                    jugadoresSeleccionados = jugadoresSeleccionados.filter(j => j.id !== usuarioId);                } else {
+                    // Seleccionar
+                    jugadoresSeleccionados.push(usuario);
+                }
+                
+                actualizarJugadoresSeleccionados();
+                mostrarResultadosBusqueda(usuarios); // Actualizar la vista
+            });
+        });
+    }
+
+    // Actualizar la lista de jugadores seleccionados
+    function actualizarJugadoresSeleccionados() {
+        const listaDiv = document.getElementById('listaJugadoresSeleccionados');
+        
+        if (jugadoresSeleccionados.length === 0) {
+            listaDiv.innerHTML = '<div class="text-muted">No hay jugadores seleccionados</div>';
+        } else {
+            let html = '';
+            jugadoresSeleccionados.forEach(jugador => {
+                html += `
+                    <div class="jugador-seleccionado badge bg-primary me-2 mb-2 p-2 d-inline-flex align-items-center">
+                        ${jugador.nombre}
+                        <button type="button" class="btn-close btn-close-white ms-2" 
+                                onclick="removerJugadorSeleccionado(${jugador.id})" 
+                                style="font-size: 0.7em;"></button>
+                    </div>
+                `;
+            });
+            listaDiv.innerHTML = html;
+        }
+        
+        // Actualizar capitanes disponibles
+        actualizarCapitanesDisponibles();
+    }
+      // Remover jugador seleccionado
+    function removerJugadorSeleccionado(usuarioId) {
+        jugadoresSeleccionados = jugadoresSeleccionados.filter(j => j.id !== usuarioId);
+        actualizarJugadoresSeleccionados();
+        
+        // Actualizar la vista de resultados si existe
+        const query = document.getElementById('jugadoresBuscador').value;
+        // NO pasar carrera automáticamente
+        if (query) {
+            buscarUsuarios(query, '');
+        }
+    }
+      // Actualizar capitanes disponibles basado en los jugadores seleccionados
+    function actualizarCapitanesDisponibles() {
+        const selectCapitan = document.getElementById('teamCapitan');
+        selectCapitan.innerHTML = '<option value="">Seleccionar capitán</option>';
+        
+        jugadoresSeleccionados.forEach(jugador => {
+            const option = document.createElement('option');
+            option.value = jugador.id;
+            option.textContent = jugador.nombre;
+            selectCapitan.appendChild(option);
         });
     }
     
-    // Mostrar vista previa del logo del equipo
-    if (document.getElementById('teamLogo')) {
-        document.getElementById('teamLogo').addEventListener('change', function() {
-            if (this.files && this.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('teamLogoPreview').classList.remove('d-none');
-                    document.getElementById('logoPreviewImage').src = e.target.result;
-                };
-                reader.readAsDataURL(this.files[0]);
-            } else {
-                document.getElementById('teamLogoPreview').classList.add('d-none');
-            }
-        });
-    }
+    // Event listeners
     
-    // Mostrar vista previa de la imagen de la disciplina
-    if (document.getElementById('disciplinaImagen')) {
-        document.getElementById('disciplinaImagen').addEventListener('change', function() {
-            if (this.files && this.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('disciplinaImagenPreview').classList.remove('d-none');
-                    document.getElementById('imagenPreviewImage').src = e.target.result;
-                };
-                reader.readAsDataURL(this.files[0]);
-            } else {
-                document.getElementById('disciplinaImagenPreview').classList.add('d-none');
-            }
-        });
-    }
+    // Botón para agregar nuevo equipo
+    document.getElementById('addTeamBtn')?.addEventListener('click', prepararNuevoEquipo);
     
-    // Eventos para botones
-    if (document.getElementById('addTeamBtn')) {
-        document.getElementById('addTeamBtn').addEventListener('click', prepararNuevoEquipo);
-    }
+    // Botón para agregar nueva disciplina
+    document.getElementById('addDisciplinaBtn')?.addEventListener('click', prepararNuevaDisciplina);
     
-    if (document.getElementById('addDisciplinaBtn')) {
-        document.getElementById('addDisciplinaBtn').addEventListener('click', prepararNuevaDisciplina);
-    }
+    // Botón para guardar equipo
+    document.getElementById('saveTeamBtn')?.addEventListener('click', guardarEquipo);
     
-    if (document.getElementById('saveTeamBtn')) {
-        document.getElementById('saveTeamBtn').addEventListener('click', guardarEquipo);
-    }
+    // Botón para guardar disciplina
+    document.getElementById('saveDisciplinaBtn')?.addEventListener('click', guardarDisciplina);
+      // Buscador de jugadores
+    document.getElementById('jugadoresBuscador')?.addEventListener('input', function() {
+        const query = this.value;
+        // NO pasar carrera automáticamente - mostrar todos los usuarios
+        buscarUsuarios(query, '');
+    });
+      // Botón de búsqueda de jugadores
+    document.getElementById('buscarJugadoresBtn')?.addEventListener('click', function() {
+        const query = document.getElementById('jugadoresBuscador').value;
+        // NO pasar carrera automáticamente - solo si el usuario quiere filtrar por carrera específicamente
+        buscarUsuarios(query, '');
+    });// Cambio en carrera - NO filtrar automáticamente por carrera
+    document.getElementById('teamCarrera')?.addEventListener('change', function() {
+        // NO hacer nada automáticamente cuando cambia la carrera
+        // Los usuarios ya cargados se mantienen visibles
+        // El filtro por carrera solo se aplicará si el usuario hace una búsqueda explícita
+        console.log('Carrera seleccionada:', this.value);
+    });
     
-    if (document.getElementById('saveDisciplinaBtn')) {
-        document.getElementById('saveDisciplinaBtn').addEventListener('click', guardarDisciplina);
-    }
+    // Cambio en disciplina para actualizar disponibilidad de jugadores
+    document.getElementById('teamDisciplina')?.addEventListener('change', function() {
+        const query = document.getElementById('jugadoresBuscador')?.value || '';
+        const carreraId = document.getElementById('teamCarrera')?.value || '';
+        
+        // Actualizar la búsqueda para mostrar disponibilidad en la nueva disciplina
+        if (query || carreraId || document.getElementById('jugadoresResultados').innerHTML.trim()) {
+            buscarUsuarios(query, carreraId);
+        }
+    });
     
-    if (document.getElementById('confirmDeleteTeamBtn')) {
-        document.getElementById('confirmDeleteTeamBtn').addEventListener('click', eliminarEquipo);
-    }
-      // Iniciar la carga de datos
+    // Event listener para cuando se abre el modal de equipo
+    document.getElementById('addEditTeamModal')?.addEventListener('shown.bs.modal', function() {
+        // Si no hay usuarios cargados, cargar algunos iniciales
+        const resultadosDiv = document.getElementById('jugadoresResultados');
+        if (!resultadosDiv.innerHTML.trim()) {
+            buscarUsuarios('', '');
+        }
+    });
+      // Cambio en jugadores seleccionados para actualizar capitanes
+    document.addEventListener('jugadoresActualizados', actualizarCapitanesDisponibles);
+
+    // Event listener para el botón de confirmación de eliminación de equipo
+    document.getElementById('confirmDeleteTeamBtn')?.addEventListener('click', eliminarEquipo);
+
+    // Cargar todos los equipos
     cargarDisciplinas();
+    cargarCarreras();
     cargarEquipos();
 });
 </script>

@@ -3,7 +3,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
-from .models import Carrera, Perfil
+from .models import Carrera, Perfil, Disciplina, Equipo
 
 class FormularioRegistro(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -81,3 +81,61 @@ class FormularioLogin(AuthenticationForm):
             'placeholder': ' '  # Placeholder vacío para form-floating
         })
     )
+
+class FormularioEquipo(forms.ModelForm):
+    # Campo para buscar y seleccionar jugadores
+    jugadores = forms.ModelMultipleChoiceField(
+        queryset=User.objects.none(),  # Se llenará dinámicamente
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='Jugadores'
+    )
+    
+    class Meta:
+        model = Equipo
+        fields = ['nombre', 'carrera', 'disciplina', 'categoria', 'capitan', 'descripcion', 'logo']
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre del equipo'
+            }),
+            'carrera': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'disciplina': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'categoria': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'capitan': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descripción del equipo (opcional)'
+            }),
+            'logo': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filtrar solo carreras activas
+        self.fields['carrera'].queryset = Carrera.objects.filter(activo=True)
+        # Obtener todas las disciplinas
+        self.fields['disciplina'].queryset = Disciplina.objects.all()
+        # Filtrar solo usuarios que son estudiantes
+        usuarios_estudiantes = User.objects.filter(
+            perfil__rol='estudiante',
+            perfil__estado_verificacion='aprobado'
+        )
+        self.fields['capitan'].queryset = usuarios_estudiantes
+        self.fields['jugadores'].queryset = usuarios_estudiantes
+        
+        # Hacer el capitán opcional inicialmente
+        self.fields['capitan'].required = False
+        self.fields['capitan'].empty_label = "Seleccionar capitán"
