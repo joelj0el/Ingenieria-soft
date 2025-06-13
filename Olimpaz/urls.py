@@ -8,6 +8,7 @@ from django.conf.urls.static import static
 
 # Importar la vista específica
 from partidos.views import resultados_view
+from usuarios.views import HomeView
 
 # Importaciones para JWT
 from rest_framework_simplejwt.views import (
@@ -39,7 +40,7 @@ urlpatterns = [    path('admin-django/', admin.site.urls),  # Cambiamos la URL d
     path('usuarios/', include('usuarios.urls')),
     path('partidos/', include('partidos.urls')),  # URLs de partidos
     path('resultados/', resultados_view, name='resultados'),  # Vista específica para resultados
-    path('', TemplateView.as_view(template_name='home.html'), name='home'),
+    path('', HomeView.as_view(), name='home'),
     
     # Nueva API REST usando ViewSets
     path('api/v2/', include('usuarios.urls_api')),

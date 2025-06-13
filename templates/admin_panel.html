@@ -2,6 +2,8 @@
 
 {% block title %}Panel de Administración - UAB{% endblock %}
 
+{% block body_class %} class="admin-page"{% endblock %}
+
 {% block content %}
 <div class="admin-panel">
     {% csrf_token %}
@@ -421,8 +423,7 @@ function loadPendingUsers() {
     
     tableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></td></tr>';
     messageDiv.innerHTML = '';
-    
-    fetch('/usuarios/api/administrativos/')
+      fetch('/api/v2/perfiles/administrativos/')
         .then(response => {
             if (!response.ok) {
                 throw new Error('Error en la solicitud');
@@ -631,13 +632,12 @@ function setupApprovalButtons() {
 function approveUser(profileId) {
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
     
-    fetch(`/usuarios/api/administrativos/${profileId}/`, {
-        method: 'PUT',
+    fetch(`/api/v2/perfiles/${profileId}/aprobar/`, {
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': csrftoken
-        },
-        body: JSON.stringify({ accion: 'aprobar' })
+        }
     })
     .then(response => {
         if (!response.ok) {
@@ -659,13 +659,12 @@ function approveUser(profileId) {
 function rejectUser(profileId) {
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
     
-    fetch(`/usuarios/api/administrativos/${profileId}/`, {
-        method: 'PUT',
+    fetch(`/api/v2/perfiles/${profileId}/rechazar/`, {
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': csrftoken
-        },
-        body: JSON.stringify({ accion: 'rechazar' })
+        }
     })
     .then(response => {
         if (!response.ok) {

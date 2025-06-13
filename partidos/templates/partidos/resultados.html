@@ -2,6 +2,8 @@
 
 {% block title %}Resultados - OLIMPAZ{% endblock %}
 
+{% block body_class %} class="admin-page"{% endblock %}
+
 {% block content %}
 <link rel="stylesheet" href="/static/css/teams.css">
 <div class="partidos-container">
@@ -144,6 +146,28 @@
                         <button type="button" class="btn btn-success w-100" id="finalizarPartidoBtn">
                             <i class="fas fa-flag-checkered"></i> Finalizar Partido
                         </button>
+                    </div>                </div>
+
+                <!-- Controles para registrar eventos (solo en partidos en vivo) -->
+                <div id="controlesEventos" class="mt-4" style="display: none;">
+                    <h6 class="text-white">Registrar Eventos</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <h6 class="text-white" id="nombreEquipoA">Equipo A</h6>
+                                <button type="button" class="btn btn-success btn-sm" id="golEquipoA">
+                                    <i class="fas fa-plus"></i> +1 Gol
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <h6 class="text-white" id="nombreEquipoB">Equipo B</h6>
+                                <button type="button" class="btn btn-success btn-sm" id="golEquipoB">
+                                    <i class="fas fa-plus"></i> +1 Gol
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -482,33 +506,114 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 `;
-                
-                // Configurar botones según el estado
+                  // Configurar botones según el estado
                 const iniciarBtn = document.getElementById('iniciarPartidoBtn');
                 const finalizarBtn = document.getElementById('finalizarPartidoBtn');
+                const controlesEventos = document.getElementById('controlesEventos');
                 
                 if (partido.estado === 'programado') {
                     iniciarBtn.style.display = 'block';
                     finalizarBtn.style.display = 'none';
+                    controlesEventos.style.display = 'none';
                 } else if (partido.estado === 'en_vivo') {
                     iniciarBtn.style.display = 'none';
                     finalizarBtn.style.display = 'block';
+                    controlesEventos.style.display = 'block';
+                    
+                    // Configurar nombres de equipos en controles de eventos
+                    document.getElementById('nombreEquipoA').textContent = partido.equipo_a.nombre;
+                    document.getElementById('nombreEquipoB').textContent = partido.equipo_b.nombre;
                 } else {
                     iniciarBtn.style.display = 'none';
                     finalizarBtn.style.display = 'none';
+                    controlesEventos.style.display = 'none';
                 }
-                
-                // Configurar event listeners
+                  // Configurar event listeners
                 iniciarBtn.onclick = () => cambiarEstadoPartido(partidoId, 'en_vivo');
                 finalizarBtn.onclick = () => cambiarEstadoPartido(partidoId, 'finalizado');
+                  // Configurar botón de actualizar score
+                const actualizarBtn = document.getElementById('actualizarScoreBtn');
+                if (actualizarBtn) {
+                    actualizarBtn.onclick = () => actualizarMarcadorEnVivo(partidoId);
+                }
+                
+                // Configurar botones de registrar goles
+                const golEquipoABtn = document.getElementById('golEquipoA');
+                const golEquipoBBtn = document.getElementById('golEquipoB');
+                
+                if (golEquipoABtn) {
+                    golEquipoABtn.onclick = () => registrarGol(partidoId, partido.equipo_a.id);
+                }
+                
+                if (golEquipoBBtn) {
+                    golEquipoBBtn.onclick = () => registrarGol(partidoId, partido.equipo_b.id);
+                }
                 
                 modal.show();
             })
             .catch(error => {
                 console.error('Error al cargar partido:', error);
                 alert('Error al cargar los detalles del partido');
+            });    };
+
+    // Función para registrar un gol
+    function registrarGol(partidoId, equipoId) {
+        fetch(`/partidos/api/partidos/${partidoId}/registrar-evento/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                tipo_evento: 'gol',
+                equipo_id: equipoId,
+                valor: 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Actualizar el marcador automáticamente
+            actualizarMarcadorEnVivo(partidoId);
+            alert('¡Gol registrado!');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al registrar gol: ' + error.message);
+        });
+    }
+
+    // Función para actualizar marcador en vivo
+    function actualizarMarcadorEnVivo(partidoId) {
+        fetch(`/partidos/api/partidos/${partidoId}/`)
+            .then(response => response.json())
+            .then(partido => {
+                // Actualizar los marcadores mostrados en el modal
+                const scoreA = document.querySelector('#gestionPartidoModal .marcador-local .score');
+                const scoreB = document.querySelector('#gestionPartidoModal .marcador-visitante .score');
+                
+                if (scoreA && scoreB) {
+                    // Usar puntos en vivo si el partido está en curso, sino los goles finales
+                    const puntosA = partido.estado === 'en_vivo' ? partido.puntos_en_vivo_a : (partido.goles_equipo_a || 0);
+                    const puntosB = partido.estado === 'en_vivo' ? partido.puntos_en_vivo_b : (partido.goles_equipo_b || 0);
+                    
+                    scoreA.textContent = puntosA;
+                    scoreB.textContent = puntosB;
+                }
+                
+                // También actualizar la lista de partidos en vivo
+                cargarPartidosEnVivo();
+                
+                alert('Marcador actualizado');
+            })
+            .catch(error => {
+                console.error('Error al actualizar marcador:', error);
+                alert('Error al actualizar el marcador');
             });
-    };
+    }
 
     // Función para cambiar estado del partido
     function cambiarEstadoPartido(partidoId, nuevoEstado) {

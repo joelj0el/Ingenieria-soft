@@ -200,6 +200,9 @@ class PartidoDetailAPIView(View):
                 'goles_equipo_a': partido.goles_equipo_a,
                 'goles_equipo_b': partido.goles_equipo_b,
                 'resultado': partido.resultado,
+                'resultado_actual': partido.resultado_actual,
+                'puntos_en_vivo_a': partido.calcular_puntos_equipo(partido.equipo_a),
+                'puntos_en_vivo_b': partido.calcular_puntos_equipo(partido.equipo_b),
                 'jornada': partido.jornada,
                 'es_fixture': partido.es_fixture,
                 'fecha_creacion': partido.fecha_creacion.strftime('%d/%m/%Y %H:%M')
@@ -893,5 +896,216 @@ class EventosPartidoAPIView(View):
         
         except Exception as e:
             print(f"Error al obtener eventos del partido: {str(e)}")
+            print(f"Traceback: {traceback.format_exc()}")
+            return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+
+
+class DashboardStatsAPIView(View):
+    def get(self, request):
+        """Obtener estadísticas generales para el dashboard"""
+        try:
+            from usuarios.models import JugadorEquipo
+            from django.db.models import Count, Q
+            
+            # Equipos registrados (todos)
+            equipos_registrados = Equipo.objects.count()
+            
+            # Partidos jugados (finalizados + en vivo)
+            partidos_jugados = Partido.objects.filter(
+                Q(estado='finalizado') | Q(estado='en_vivo')
+            ).count()
+            
+            # Partidos pendientes (solo programados)
+            partidos_pendientes = Partido.objects.filter(estado='programado').count()
+            
+            # Participantes (jugadores activos en equipos)
+            participantes = JugadorEquipo.objects.values('jugador').distinct().count()
+            
+            # Calcular porcentajes de cambio (simulados por ahora)
+            # En el futuro se pueden calcular basándose en datos históricos
+            stats = {
+                'equipos_registrados': {
+                    'count': equipos_registrados,
+                    'change': '+12% esta semana'  # Simulado
+                },
+                'partidos_jugados': {
+                    'count': partidos_jugados,
+                    'change': '+8% este mes'  # Simulado
+                },
+                'partidos_pendientes': {
+                    'count': partidos_pendientes,
+                    'change': '1 nuevo hoy'  # Simulado
+                },
+                'participantes': {
+                    'count': participantes,
+                    'change': '+5% nuevos hoy'  # Simulado
+                }
+            }
+            
+            return JsonResponse(stats)
+            
+        except Exception as e:
+            print(f"Error al obtener estadísticas: {str(e)}")
+            return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+
+
+class PartidosRecientesAPIView(View):
+    def get(self, request):
+        """Obtener los últimos partidos finalizados o en vivo"""
+        try:
+            disciplina_id = request.GET.get('disciplina_id')
+            categoria = request.GET.get('categoria')
+            
+            # Filtros base
+            filtros = Q(estado__in=['finalizado', 'en_vivo'])
+            
+            if disciplina_id:
+                filtros &= Q(disciplina_id=disciplina_id)
+            if categoria:
+                filtros &= Q(categoria=categoria)
+            
+            partidos_recientes = Partido.objects.filter(filtros).select_related(
+                'equipo_a', 'equipo_b', 'disciplina'
+            ).order_by('-fecha', '-hora')[:5]
+            
+            resultado = []
+            for partido in partidos_recientes:
+                resultado.append({
+                    'id': partido.id,
+                    'equipo_a': partido.equipo_a.nombre,
+                    'equipo_b': partido.equipo_b.nombre,
+                    'equipo_a_logo': partido.equipo_a.logo.url if partido.equipo_a.logo else None,
+                    'equipo_b_logo': partido.equipo_b.logo.url if partido.equipo_b.logo else None,
+                    'puntos_a': partido.goles_equipo_a or 0,
+                    'puntos_b': partido.goles_equipo_b or 0,
+                    'disciplina': partido.disciplina.nombre,
+                    'categoria': partido.categoria,
+                    'fecha_partido': partido.fecha.isoformat(),
+                    'hora': partido.hora.strftime('%H:%M'),
+                    'estado': partido.estado,
+                    'lugar': partido.lugar or 'Por definir'
+                })
+            
+            return JsonResponse(resultado, safe=False)
+            
+        except Exception as e:
+            print(f"Error al obtener partidos recientes: {str(e)}")
+            return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+
+
+class TablaPosicionesAPIView(View):
+    def get(self, request):
+        """Generar tabla de posiciones para una disciplina específica"""
+        try:
+            disciplina_id = request.GET.get('disciplina_id')
+            categoria = request.GET.get('categoria', 'masculino')
+            
+            if not disciplina_id:
+                return JsonResponse({'error': 'disciplina_id es requerido'}, status=400)
+            
+            try:
+                disciplina = Disciplina.objects.get(id=disciplina_id)
+            except Disciplina.DoesNotExist:
+                return JsonResponse({'error': 'Disciplina no encontrada'}, status=404)
+            
+            # Obtener equipos de la disciplina y categoría
+            equipos = Equipo.objects.filter(disciplina=disciplina, categoria=categoria)
+            
+            if not equipos.exists():
+                return JsonResponse({'error': 'No hay equipos en esta disciplina y categoría'}, status=404)
+            
+            # Calcular estadísticas para cada equipo
+            tabla = []
+            for equipo in equipos:
+                # Partidos como local (equipo_a)
+                partidos_local = Partido.objects.filter(
+                    equipo_a=equipo,
+                    disciplina=disciplina,
+                    categoria=categoria,
+                    estado='finalizado'
+                )
+                
+                # Partidos como visitante (equipo_b)
+                partidos_visitante = Partido.objects.filter(
+                    equipo_b=equipo,
+                    disciplina=disciplina,
+                    categoria=categoria,
+                    estado='finalizado'
+                )
+                
+                # Calcular estadísticas
+                pj = partidos_local.count() + partidos_visitante.count()  # Partidos jugados
+                g = 0   # Ganados
+                e = 0   # Empatados
+                p = 0   # Perdidos
+                gf = 0  # Goles a favor
+                gc = 0  # Goles en contra
+                
+                # Partidos como local
+                for partido in partidos_local:
+                    goles_favor = partido.goles_equipo_a or 0
+                    goles_contra = partido.goles_equipo_b or 0
+                    gf += goles_favor
+                    gc += goles_contra
+                    
+                    if goles_favor > goles_contra:
+                        g += 1
+                    elif goles_favor == goles_contra:
+                        e += 1
+                    else:
+                        p += 1
+                
+                # Partidos como visitante
+                for partido in partidos_visitante:
+                    goles_favor = partido.goles_equipo_b or 0
+                    goles_contra = partido.goles_equipo_a or 0
+                    gf += goles_favor
+                    gc += goles_contra
+                    
+                    if goles_favor > goles_contra:
+                        g += 1
+                    elif goles_favor == goles_contra:
+                        e += 1
+                    else:
+                        p += 1
+                
+                # Calcular puntos (3 por victoria, 1 por empate)
+                pts = (g * 3) + (e * 1)
+                
+                # Diferencia de goles
+                dif = gf - gc
+                
+                tabla.append({
+                    'equipo': {
+                        'id': equipo.id,
+                        'nombre': equipo.nombre,
+                        'logo': equipo.logo.url if equipo.logo else None,
+                        'carrera': equipo.carrera.nombre if equipo.carrera else 'Sin carrera'
+                    },
+                    'pj': pj,
+                    'g': g,
+                    'e': e,
+                    'p': p,
+                    'gf': gf,
+                    'gc': gc,
+                    'dif': dif,
+                    'pts': pts
+                })
+            
+            # Ordenar tabla: primero por puntos, luego por diferencia de goles, luego por goles a favor
+            tabla.sort(key=lambda x: (-x['pts'], -x['dif'], -x['gf']))
+            
+            # Agregar posición
+            for i, equipo in enumerate(tabla, 1):
+                equipo['pos'] = i
+            
+            return JsonResponse({
+                'disciplina': disciplina.nombre,
+                'categoria': categoria,
+                'tabla': tabla
+            })
+            
+        except Exception as e:
+            print(f"Error al generar tabla de posiciones: {str(e)}")
             print(f"Traceback: {traceback.format_exc()}")
             return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)

@@ -88,7 +88,7 @@ class PerfilViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def administrativos(self, request):
-        """Listar perfiles administrativos"""
+        """Listar perfiles administrativos pendientes de aprobación"""
         if not request.user.is_superuser:
             try:
                 perfil = Perfil.objects.get(usuario=request.user)
@@ -97,9 +97,60 @@ class PerfilViewSet(viewsets.ModelViewSet):
             except Perfil.DoesNotExist:
                 return Response({"detail": "No tiene permisos"}, status=status.HTTP_403_FORBIDDEN)
         
-        perfiles = Perfil.objects.filter(rol='administrativo')
+        # Filtrar solo perfiles administrativos pendientes de aprobación
+        perfiles = Perfil.objects.filter(
+            rol='administrativo', 
+            estado_verificacion='pendiente'
+        ).select_related('usuario')
+        
         serializer = PerfilSerializer(perfiles, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def aprobar(self, request, pk=None):
+        """Aprobar un perfil administrativo"""
+        if not request.user.is_superuser:
+            try:
+                perfil = Perfil.objects.get(usuario=request.user)
+                if perfil.rol != 'administrativo' or perfil.estado_verificacion != 'aprobado':
+                    return Response({"detail": "No tiene permisos"}, status=status.HTTP_403_FORBIDDEN)
+            except Perfil.DoesNotExist:
+                return Response({"detail": "No tiene permisos"}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            perfil = self.get_object()
+            if perfil.rol != 'administrativo':
+                return Response({"detail": "Solo se pueden aprobar perfiles administrativos"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            perfil.estado_verificacion = 'aprobado'
+            perfil.save()
+            
+            return Response({"detail": "Usuario aprobado correctamente"})
+        except Perfil.DoesNotExist:
+            return Response({"detail": "Perfil no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=True, methods=['post'])
+    def rechazar(self, request, pk=None):
+        """Rechazar un perfil administrativo"""
+        if not request.user.is_superuser:
+            try:
+                perfil = Perfil.objects.get(usuario=request.user)
+                if perfil.rol != 'administrativo' or perfil.estado_verificacion != 'aprobado':
+                    return Response({"detail": "No tiene permisos"}, status=status.HTTP_403_FORBIDDEN)
+            except Perfil.DoesNotExist:
+                return Response({"detail": "No tiene permisos"}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            perfil = self.get_object()
+            if perfil.rol != 'administrativo':
+                return Response({"detail": "Solo se pueden rechazar perfiles administrativos"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            perfil.estado_verificacion = 'rechazado'
+            perfil.save()
+            
+            return Response({"detail": "Usuario rechazado correctamente"})
+        except Perfil.DoesNotExist:
+            return Response({"detail": "Perfil no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()

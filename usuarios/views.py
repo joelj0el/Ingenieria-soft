@@ -13,7 +13,29 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from .serializers import UserSerializer, PerfilSerializer, LoginSerializer, PostSerializer
 from django.contrib.auth.models import User
-from .models import Perfil, Post, Carrera
+from .models import Perfil, Post, Carrera, Disciplina
+
+# Clase para el dashboard home
+class HomeView(View):
+    def get(self, request):
+        # Obtener todas las disciplinas para el selector
+        disciplinas = Disciplina.objects.all()
+        
+        # Determinar si el usuario es administrador
+        is_admin = False
+        if request.user.is_authenticated:
+            try:
+                perfil = Perfil.objects.get(usuario=request.user)
+                is_admin = perfil.rol == 'administrativo' and perfil.estado_verificacion == 'aprobado'
+            except Perfil.DoesNotExist:
+                pass
+        
+        context = {
+            'disciplinas': disciplinas,
+            'is_admin': is_admin,
+        }
+        
+        return render(request, 'home.html', context)
 
 # Clase para personalizar el logout
 class CustomLogoutView(View):

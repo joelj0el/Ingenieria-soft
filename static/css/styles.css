@@ -14,13 +14,31 @@
     --premier-pink: #ff2882;
 }
 
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* Reset para asegurar cobertura completa */
+html, body {
+    height: 100%;
     margin: 0;
     padding: 0;
-    background-color: var(--dark-bg);
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
     color: var(--black);
     overflow-x: hidden;
+    width: 100%;
+}
+
+/* Fondo azul para páginas de gestión/admin */
+body.admin-page {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    min-height: 100vh;
+}
+
+/* Asegurar que el html también tenga el fondo azul */
+html:has(body.admin-page) {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    min-height: 100vh;
 }
 
 /* Estilos del Header y Navegación al estilo Premier League */
@@ -95,6 +113,17 @@ body {
 }
 
 /* Barra de navegación principal */
+.navbar {
+    background: linear-gradient(135deg, var(--primary-green), var(--dark-green)) !important;
+    padding: 0.5rem 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border-bottom: 3px solid var(--premier-pink);
+}
+
+.navbar-dark {
+    background: linear-gradient(135deg, var(--primary-green), var(--dark-green)) !important;
+}
+
 .premier-navbar {
     background-color: var(--premier-purple);
     padding: 0;
@@ -121,7 +150,7 @@ body {
 }
 
 .nav-link {
-    color: var(--white);
+    color: var(--white) !important;
     font-weight: 600;
     font-size: 16px;
     text-transform: uppercase;
@@ -130,11 +159,19 @@ body {
     text-decoration: none;
     letter-spacing: 1px;
     transition: all 0.3s ease;
+    border-radius: 5px;
+    margin: 0 2px;
 }
 
 .nav-link:hover {
-    color: var(--premier-pink);
+    color: var(--premier-pink) !important;
     text-decoration: none;
+    background-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.nav-link.active {
+    color: var(--premier-pink) !important;
     background-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -172,6 +209,28 @@ body {
     font-size: 16px;
     font-weight: 600;
     color: var(--white);
+}
+
+/* Estilos específicos para el botón ADMIN */
+.btn-admin {
+    background: var(--premier-pink) !important;
+    color: white !important;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 25px;
+    padding: 12px 24px;
+    border: 2px solid var(--premier-pink);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 40, 130, 0.3);
+}
+
+.btn-admin:hover {
+    background: white !important;
+    color: var(--premier-pink) !important;
+    border-color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 40, 130, 0.4);
 }
 
 .btn-logout, .btn-nav-login {
@@ -353,6 +412,51 @@ body {
     color: var(--dark-green);
 }
 
+/* Mejoras generales de contraste y legibilidad */
+h1, h2, h3, h4, h5, h6 {
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.text-muted {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.table-dark {
+    background: linear-gradient(135deg, rgba(9, 35, 168, 0.9), rgba(12, 12, 92, 0.9));
+}
+
+.table-dark th {
+    background: var(--primary-green);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.table-dark td {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Mejorar contraste de botones */
+.btn-primary {
+    background: var(--primary-green);
+    border-color: var(--primary-green);
+    box-shadow: 0 2px 10px rgba(9, 35, 168, 0.3);
+}
+
+.btn-primary:hover {
+    background: var(--dark-green);
+    border-color: var(--dark-green);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(9, 35, 168, 0.4);
+}
+
+.btn-success {
+    box-shadow: 0 2px 10px rgba(25, 135, 84, 0.3);
+}
+
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(25, 135, 84, 0.4);
+}
+
 /* Responsiveness */
 @media (max-width: 992px) {
     .hero-title {
@@ -513,11 +617,13 @@ select.form-select:focus {
 
 /* Estilos para el Panel de Administración */
 .admin-panel {
-    background-color: rgba(7, 18, 73, 0.3);
-    border-radius: 10px;
+    border-radius: 0;
     padding: 25px;
-    margin-bottom: 30px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    margin: 0;
+    box-shadow: none;
+    min-height: 100vh;
+    width: 100%;
+    /* Removemos el background ya que ahora se aplica al body */
 }
 
 .admin-header {
@@ -527,16 +633,17 @@ select.form-select:focus {
     flex-wrap: wrap;
     margin-bottom: 20px;
     padding-bottom: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .admin-title {
-    font-size: 2rem;
+    font-size: 2.5rem;
     font-weight: 700;
     margin: 0;
     color: var(--white);
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .admin-actions {
