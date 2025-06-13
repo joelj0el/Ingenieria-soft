@@ -13,7 +13,7 @@ from itertools import combinations
 import random
 from django.shortcuts import render
 
-from .models import Partido, FixtureGenerado
+from .models import Partido, FixtureGenerado, EventoPartido
 from usuarios.models import Perfil, Disciplina, Equipo
 from django.contrib.auth.models import User
 
@@ -575,6 +575,29 @@ def partidos_view(request):
     return render(request, 'partidos/partidos.html', context)
 
 
+def resultados_view(request):
+    """Vista principal para gestión de resultados"""
+    # Verificar si el usuario puede ver resultados
+    puede_gestionar = False
+    if request.user.is_authenticated:
+        try:
+            perfil = Perfil.objects.get(usuario=request.user)
+            puede_gestionar = perfil.rol == 'administrativo' and perfil.estado_verificacion == 'aprobado'
+        except Perfil.DoesNotExist:
+            pass
+    
+    # Obtener disciplinas para los filtros
+    disciplinas = Disciplina.objects.all()
+    
+    context = {
+        'puede_gestionar': puede_gestionar,
+        'is_admin': puede_gestionar,
+        'disciplinas': disciplinas,
+    }
+    
+    return render(request, 'partidos/resultados.html', context)
+
+
 class EstadoFixtureAPIView(View):
     @method_decorator(login_required)
     def get(self, request):
@@ -648,5 +671,227 @@ class EstadoFixtureAPIView(View):
         
         except Exception as e:
             print(f"Error al obtener estado del fixture: {str(e)}")
+            print(f"Traceback: {traceback.format_exc()}")
+            return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+
+
+# APIs para gestión de resultados
+
+class CambiarEstadoPartidoAPIView(View):
+    @method_decorator(login_required)
+    @method_decorator(csrf_exempt)
+    def post(self, request, partido_id):
+        """Cambiar el estado de un partido (solo administradores)"""
+        try:
+            # Verificar si el usuario es administrativo
+            try:
+                perfil = Perfil.objects.get(usuario=request.user)
+                if perfil.rol != 'administrativo' or perfil.estado_verificacion != 'aprobado':
+                    return JsonResponse({'error': 'Solo los administradores pueden cambiar el estado de partidos'}, status=403)
+            except Perfil.DoesNotExist:
+                return JsonResponse({'error': 'Acceso denegado'}, status=403)
+            
+            # Obtener el partido
+            try:
+                partido = Partido.objects.get(id=partido_id)
+            except Partido.DoesNotExist:
+                return JsonResponse({'error': 'Partido no encontrado'}, status=404)
+            
+            # Obtener el nuevo estado
+            try:
+                data = json.loads(request.body)
+                nuevo_estado = data.get('estado')
+            except json.JSONDecodeError:
+                return JsonResponse({'error': 'Formato de datos inválido'}, status=400)
+            
+            if nuevo_estado not in ['programado', 'en_vivo', 'finalizado']:
+                return JsonResponse({'error': 'Estado inválido'}, status=400)
+            
+            estado_anterior = partido.estado
+            partido.estado = nuevo_estado
+            
+            # Si se finaliza el partido, actualizar resultado basándose en eventos
+            if nuevo_estado == 'finalizado':
+                partido.actualizar_resultado_final()
+            
+            partido.save()
+            
+            return JsonResponse({
+                'message': f'Estado cambiado de {estado_anterior} a {nuevo_estado}',
+                'estado_anterior': estado_anterior,
+                'estado_nuevo': nuevo_estado,
+                'partido_id': partido.id,
+                'resultado_actual': partido.resultado_actual
+            })
+        
+        except Exception as e:
+            print(f"Error al cambiar estado del partido: {str(e)}")
+            print(f"Traceback: {traceback.format_exc()}")
+            return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+
+
+class RegistrarEventoAPIView(View):
+    @method_decorator(login_required)
+    @method_decorator(csrf_exempt)
+    def post(self, request, partido_id):
+        """Registrar un evento en un partido (solo administradores)"""
+        try:
+            # Verificar si el usuario es administrativo
+            try:
+                perfil = Perfil.objects.get(usuario=request.user)
+                if perfil.rol != 'administrativo' or perfil.estado_verificacion != 'aprobado':
+                    return JsonResponse({'error': 'Solo los administradores pueden registrar eventos'}, status=403)
+            except Perfil.DoesNotExist:
+                return JsonResponse({'error': 'Acceso denegado'}, status=403)
+            
+            # Obtener el partido
+            try:
+                partido = Partido.objects.get(id=partido_id)
+            except Partido.DoesNotExist:
+                return JsonResponse({'error': 'Partido no encontrado'}, status=404)
+            
+            # Obtener datos del evento
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({'error': 'Formato de datos inválido'}, status=400)
+            
+            equipo_id = data.get('equipo_id')
+            tipo_evento = data.get('tipo_evento', 'gol')
+            minuto = data.get('minuto')
+            descripcion = data.get('descripcion', '')
+            valor = data.get('valor', 1)
+            
+            # Validaciones
+            if not equipo_id:
+                return JsonResponse({'error': 'Debe especificar el equipo'}, status=400)
+            
+            try:
+                from usuarios.models import Equipo
+                equipo = Equipo.objects.get(id=equipo_id)
+            except Equipo.DoesNotExist:
+                return JsonResponse({'error': 'Equipo no encontrado'}, status=404)
+            
+            # Verificar que el equipo pertenezca al partido
+            if equipo not in [partido.equipo_a, partido.equipo_b]:
+                return JsonResponse({'error': 'El equipo no pertenece a este partido'}, status=400)
+            
+            # Crear el evento
+            evento = EventoPartido.objects.create(
+                partido=partido,
+                equipo=equipo,
+                tipo_evento=tipo_evento,
+                minuto=minuto,
+                descripcion=descripcion,
+                valor=valor,
+                registrado_por=request.user
+            )
+            
+            return JsonResponse({
+                'message': 'Evento registrado correctamente',
+                'evento': {
+                    'id': evento.id,
+                    'equipo': equipo.nombre,
+                    'tipo_evento': evento.get_tipo_evento_display(),
+                    'minuto': evento.minuto,
+                    'valor': evento.valor,
+                    'descripcion': evento.descripcion,
+                    'timestamp': evento.timestamp.strftime('%H:%M:%S')
+                },
+                'resultado_actual': partido.resultado_actual,
+                'puntos_equipo_a': partido.calcular_puntos_equipo(partido.equipo_a),
+                'puntos_equipo_b': partido.calcular_puntos_equipo(partido.equipo_b)
+            })
+        
+        except Exception as e:
+            print(f"Error al registrar evento: {str(e)}")
+            print(f"Traceback: {traceback.format_exc()}")
+            return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+
+
+class PartidosEnVivoAPIView(View):
+    @method_decorator(login_required)
+    def get(self, request):
+        """Obtener lista de partidos en vivo"""
+        try:
+            partidos_en_vivo = Partido.objects.filter(estado='en_vivo').select_related(
+                'equipo_a', 'equipo_b', 'disciplina'
+            )
+            
+            resultado = []
+            for partido in partidos_en_vivo:
+                resultado.append({
+                    'id': partido.id,
+                    'equipo_a': {
+                        'id': partido.equipo_a.id,
+                        'nombre': partido.equipo_a.nombre,
+                        'logo': partido.equipo_a.logo.url if partido.equipo_a.logo else None,
+                        'puntos': partido.goles_equipo_a or 0
+                    },
+                    'equipo_b': {
+                        'id': partido.equipo_b.id,
+                        'nombre': partido.equipo_b.nombre,
+                        'logo': partido.equipo_b.logo.url if partido.equipo_b.logo else None,
+                        'puntos': partido.goles_equipo_b or 0
+                    },
+                    'disciplina': {
+                        'id': partido.disciplina.id,
+                        'nombre': partido.disciplina.nombre,
+                    },
+                    'categoria': partido.categoria,
+                    'fecha': partido.fecha.strftime('%Y-%m-%d'),
+                    'hora': partido.hora.strftime('%H:%M'),
+                    'lugar': partido.lugar,
+                    'goles_equipo_a': partido.goles_equipo_a or 0,
+                    'goles_equipo_b': partido.goles_equipo_b or 0,
+                })
+            
+            return JsonResponse(resultado, safe=False)        
+        except Exception as e:
+            print(f"Error al obtener partidos en vivo: {str(e)}")
+            print(f"Traceback: {traceback.format_exc()}")
+            return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+
+
+
+
+class EventosPartidoAPIView(View):
+    @method_decorator(login_required)
+    def get(self, request, partido_id):
+        """Obtener todos los eventos de un partido específico"""
+        try:
+            try:
+                partido = Partido.objects.get(id=partido_id)
+            except Partido.DoesNotExist:
+                return JsonResponse({'error': 'Partido no encontrado'}, status=404)
+            
+            eventos = partido.eventos.filter(activo=True).order_by('timestamp')
+            
+            resultado = {
+                'partido': {
+                    'id': partido.id,
+                    'equipo_a': partido.equipo_a.nombre,
+                    'equipo_b': partido.equipo_b.nombre,
+                    'estado': partido.estado,
+                    'resultado_actual': partido.resultado_actual
+                },
+                'eventos': [
+                    {
+                        'id': evento.id,
+                        'equipo': evento.equipo.nombre,
+                        'tipo_evento': evento.get_tipo_evento_display(),
+                        'minuto': evento.minuto,
+                        'valor': evento.valor,
+                        'descripcion': evento.descripcion,
+                        'timestamp': evento.timestamp.strftime('%H:%M:%S'),
+                        'registrado_por': evento.registrado_por.get_full_name() or evento.registrado_por.username
+                    } for evento in eventos
+                ]
+            }
+            
+            return JsonResponse(resultado)
+        
+        except Exception as e:
+            print(f"Error al obtener eventos del partido: {str(e)}")
             print(f"Traceback: {traceback.format_exc()}")
             return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)

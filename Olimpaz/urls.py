@@ -6,6 +6,9 @@ from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
 
+# Importar la vista específica
+from partidos.views import resultados_view
+
 # Importaciones para JWT
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -32,10 +35,10 @@ schema_view = get_schema_view(
    permission_classes=(permissions.AllowAny,),
 )
 
-urlpatterns = [
-    path('admin-django/', admin.site.urls),  # Cambiamos la URL del admin de Django
+urlpatterns = [    path('admin-django/', admin.site.urls),  # Cambiamos la URL del admin de Django
     path('usuarios/', include('usuarios.urls')),
     path('partidos/', include('partidos.urls')),  # URLs de partidos
+    path('resultados/', resultados_view, name='resultados'),  # Vista específica para resultados
     path('', TemplateView.as_view(template_name='home.html'), name='home'),
     
     # Nueva API REST usando ViewSets

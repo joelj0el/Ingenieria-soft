@@ -1,0 +1,600 @@
+{% extends 'base.html' %}
+
+{% block title %}Resultados - OLIMPAZ{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/teams.css">
+<div class="partidos-container">
+    {% csrf_token %}
+    <div class="partidos-header">
+        <h1 class="partidos-title">Registro de Resultados</h1>
+        <small class="text-muted">Registra goles, victorias y actualiza el marcador</small>
+    </div>
+
+    <!-- Contenedor principal con dos columnas -->
+    <div class="row mt-4">
+        <!-- Columna izquierda: Registro de resultados -->
+        <div class="col-md-6">
+            <div class="card dark-modal">
+                <div class="card-header">
+                    <h5><i class="fas fa-edit"></i> Registrar Resultado</h5>
+                </div>
+                <div class="card-body">
+                    {% if puede_gestionar %}
+                    <!-- Selector de partido -->
+                    <div class="mb-3">
+                        <label for="partidoSelector" class="form-label">Seleccionar Partido</label>
+                        <select class="form-select" id="partidoSelector">
+                            <option value="">Selecciona un partido</option>
+                        </select>
+                    </div>
+
+                    <!-- Formulario de registro de goles -->
+                    <div id="formularioResultado" style="display: none;">
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label for="golesLocal" class="form-label">Goles Local</label>
+                                <input type="number" class="form-control" id="golesLocal" min="0" value="0">
+                            </div>
+                            <div class="col-6">
+                                <label for="golesVisitante" class="form-label">Goles Visitante</label>
+                                <input type="number" class="form-control" id="golesVisitante" min="0" value="0">
+                            </div>
+                        </div>
+
+                        <!-- Registro de evento individual -->
+                        <div class="mb-3">
+                            <h6>Registrar Evento</h6>
+                            <div class="row">
+                                <div class="col-4">
+                                    <select class="form-select" id="equipoEvento">
+                                        <option value="">Equipo</option>
+                                    </select>
+                                </div>
+                                <div class="col-3">
+                                    <select class="form-select" id="tipoEvento">
+                                        <option value="gol">Gol</option>
+                                        <option value="punto">Punto</option>
+                                        <option value="tarjeta_amarilla">T. Amarilla</option>
+                                        <option value="tarjeta_roja">T. Roja</option>
+                                    </select>
+                                </div>
+                                <div class="col-3">
+                                    <input type="number" class="form-control" id="minutoEvento" placeholder="Min." min="0">
+                                </div>
+                                <div class="col-2">
+                                    <button type="button" class="btn btn-primary btn-sm" id="registrarEventoBtn">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones de acción -->
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-success" id="registrarResultadoBtn">
+                                <i class="fas fa-save"></i> Registrar Resultado
+                            </button>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Solo los administradores pueden gestionar resultados.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna derecha: Partidos en vivo y resultados recientes -->
+        <div class="col-md-6">
+            <!-- Partidos en vivo -->
+            <div class="card dark-modal mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-circle text-danger blink"></i> Partidos en Vivo</h5>
+                    <button class="btn btn-sm btn-outline-light" id="refrescarEnVivoBtn">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="card-body" id="partidosEnVivoContainer">
+                    <p class="text-muted text-center">Cargando partidos en vivo...</p>
+                </div>
+            </div>
+
+            <!-- Resultados recientes -->
+            <div class="card dark-modal">
+                <div class="card-header">
+                    <h5><i class="fas fa-history"></i> Resultados Recientes</h5>
+                </div>
+                <div class="card-body" id="resultadosRecientesContainer">
+                    <p class="text-muted text-center">Cargando resultados...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para gestión avanzada de partido -->
+<div class="modal fade" id="gestionPartidoModal" tabindex="-1" aria-labelledby="gestionPartidoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="gestionPartidoModalLabel">Gestión de Partido</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="partidoDetalles">
+                    <!-- Se llenará dinámicamente -->
+                </div>
+                
+                <!-- Botones de cambio de estado -->
+                <div class="row mt-4">
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-warning w-100" id="iniciarPartidoBtn">
+                            <i class="fas fa-play"></i> Iniciar Partido
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-info w-100" id="actualizarScoreBtn">
+                            <i class="fas fa-refresh"></i> Actualizar Score
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-success w-100" id="finalizarPartidoBtn">
+                            <i class="fas fa-flag-checkered"></i> Finalizar Partido
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Historial de eventos -->
+                <div class="mt-4">
+                    <h6>Historial de Eventos</h6>
+                    <div id="historialEventos" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Se llenará dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.partidos-container {
+    background-color: rgba(7, 18, 73, 0.3);
+    border-radius: 10px;
+    padding: 25px;
+    margin-top: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.partidos-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--white);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.dark-modal .card {
+    background-color: #343a40;
+    color: #f8f9fa;
+}
+
+.dark-modal .card-header {
+    background-color: #495057;
+    border-bottom: 1px solid #6c757d;
+}
+
+.partido-en-vivo {
+    border: 2px solid #dc3545;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.vs-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 10px 0;
+}
+
+.equipo {
+    text-align: center;
+    flex: 1;
+}
+
+.equipo-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 5px;
+}
+
+.vs-text {
+    font-weight: bold;
+    font-size: 1.2em;
+    margin: 0 15px;
+    color: #ffc107;
+}
+
+.score {
+    font-size: 2em;
+    font-weight: bold;
+    color: #28a745;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.blink {
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.3; }
+}
+
+.evento-item {
+    padding: 8px;
+    border-left: 3px solid #007bff;
+    margin-bottom: 8px;
+    background-color: rgba(0, 123, 255, 0.1);
+    border-radius: 4px;
+}
+
+.evento-gol {
+    border-left-color: #28a745;
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.evento-tarjeta {
+    border-left-color: #ffc107;
+    background-color: rgba(255, 193, 7, 0.1);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+    let partidoSeleccionado = null;
+    let actualizacionInterval = null;
+    
+    // Variable para verificar permisos (definida desde Django)
+    const puedeGestionar = {{ puede_gestionar|yesno:"true,false" }};
+
+    // Cargar partidos disponibles para gestionar
+    function cargarPartidosDisponibles() {
+        fetch('/partidos/api/partidos/')
+            .then(response => response.json())
+            .then(partidos => {
+                const selector = document.getElementById('partidoSelector');
+                selector.innerHTML = '<option value="">Selecciona un partido</option>';
+                
+                // Filtrar partidos programados y en vivo
+                const partidosGestionables = partidos.filter(p => 
+                    p.estado === 'programado' || p.estado === 'en_vivo'
+                );
+                
+                partidosGestionables.forEach(partido => {
+                    const option = document.createElement('option');
+                    option.value = partido.id;
+                    option.textContent = `${partido.equipo_a.nombre} vs ${partido.equipo_b.nombre} - ${partido.estado}`;
+                    selector.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error al cargar partidos:', error);
+            });
+    }
+
+    // Cargar partidos en vivo
+    function cargarPartidosEnVivo() {
+        fetch('/partidos/api/partidos-en-vivo/')
+            .then(response => response.json())
+            .then(partidos => {
+                const container = document.getElementById('partidosEnVivoContainer');
+                
+                if (partidos.length === 0) {
+                    container.innerHTML = '<p class="text-muted text-center">No hay partidos en vivo</p>';
+                    return;
+                }
+                
+                let html = '';
+                partidos.forEach(partido => {
+                    html += `
+                        <div class="partido-en-vivo">
+                            <div class="vs-container">
+                                <div class="equipo">
+                                    <img src="${partido.equipo_a.logo || '/static/images/default-team.svg'}" 
+                                         alt="${partido.equipo_a.nombre}" class="equipo-logo">
+                                    <div><strong>${partido.equipo_a.nombre}</strong></div>
+                                </div>
+                                <div class="vs-text">VS</div>
+                                <div class="equipo">
+                                    <img src="${partido.equipo_b.logo || '/static/images/default-team.svg'}" 
+                                         alt="${partido.equipo_b.nombre}" class="equipo-logo">
+                                    <div><strong>${partido.equipo_b.nombre}</strong></div>
+                                </div>
+                            </div>
+                            <div class="score">${partido.equipo_a.puntos} - ${partido.equipo_b.puntos}</div>
+                            <div class="text-center">
+                                <small class="text-muted">${partido.disciplina.nombre} - ${partido.categoria}</small>
+                                <br>
+                                <button class="btn btn-sm btn-outline-light mt-2" onclick="abrirGestionPartido(${partido.id})">
+                                    <i class="fas fa-cog"></i> Gestionar
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error al cargar partidos en vivo:', error);
+                document.getElementById('partidosEnVivoContainer').innerHTML = 
+                    '<p class="text-danger text-center">Error al cargar partidos</p>';
+            });
+    }
+
+    // Cargar resultados recientes
+    function cargarResultadosRecientes() {
+        fetch('/partidos/api/partidos/?estado=finalizado')
+            .then(response => response.json())
+            .then(partidos => {
+                const container = document.getElementById('resultadosRecientesContainer');
+                
+                if (partidos.length === 0) {
+                    container.innerHTML = '<p class="text-muted text-center">No hay resultados recientes</p>';
+                    return;
+                }
+                
+                // Tomar los 5 más recientes
+                const recientes = partidos.slice(0, 5);
+                let html = '';
+                
+                recientes.forEach(partido => {
+                    const fecha = new Date(partido.fecha).toLocaleDateString();
+                    html += `
+                        <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                            <div>
+                                <div class="fw-bold">${partido.equipo_a.nombre} vs ${partido.equipo_b.nombre}</div>
+                                <small class="text-muted">${partido.disciplina.nombre}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-success">${partido.goles_equipo_a || 0} - ${partido.goles_equipo_b || 0}</div>
+                                <small class="text-muted">${fecha}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error al cargar resultados recientes:', error);
+            });
+    }
+
+    // Evento: cambio de partido seleccionado
+    document.getElementById('partidoSelector').addEventListener('change', function() {
+        const partidoId = this.value;
+        const formulario = document.getElementById('formularioResultado');
+        
+        if (partidoId) {
+            partidoSeleccionado = partidoId;
+            formulario.style.display = 'block';
+            
+            // Cargar equipos del partido
+            fetch(`/partidos/api/partidos/${partidoId}/`)
+                .then(response => response.json())
+                .then(partido => {
+                    const equipoSelect = document.getElementById('equipoEvento');
+                    equipoSelect.innerHTML = `
+                        <option value="">Equipo</option>
+                        <option value="${partido.equipo_a.id}">${partido.equipo_a.nombre}</option>
+                        <option value="${partido.equipo_b.id}">${partido.equipo_b.nombre}</option>
+                    `;
+                });
+        } else {
+            formulario.style.display = 'none';
+            partidoSeleccionado = null;
+        }
+    });
+
+    // Registrar evento
+    document.getElementById('registrarEventoBtn')?.addEventListener('click', function() {
+        if (!partidoSeleccionado) {
+            alert('Selecciona un partido primero');
+            return;
+        }
+        
+        const equipoId = document.getElementById('equipoEvento').value;
+        const tipoEvento = document.getElementById('tipoEvento').value;
+        const minuto = document.getElementById('minutoEvento').value;
+        
+        if (!equipoId) {
+            alert('Selecciona un equipo');
+            return;
+        }
+        
+        const data = {
+            equipo_id: equipoId,
+            tipo_evento: tipoEvento,
+            minuto: minuto ? parseInt(minuto) : null,
+            valor: 1
+        };
+        
+        fetch(`/partidos/api/partidos/${partidoSeleccionado}/registrar-evento/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Error: ' + data.error);
+            } else {
+                alert('Evento registrado correctamente');
+                // Limpiar formulario
+                document.getElementById('equipoEvento').value = '';
+                document.getElementById('minutoEvento').value = '';
+                // Refrescar partidos en vivo
+                cargarPartidosEnVivo();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al registrar evento');
+        });
+    });    // Función global para abrir gestión de partido
+    window.abrirGestionPartido = function(partidoId) {
+        // Abrir modal de gestión avanzada
+        const modal = new bootstrap.Modal(document.getElementById('gestionPartidoModal'));
+        
+        // Cargar detalles del partido
+        fetch(`/partidos/api/partidos/${partidoId}/`)
+            .then(response => response.json())
+            .then(partido => {
+                document.getElementById('partidoDetalles').innerHTML = `
+                    <div class="text-center mb-3">
+                        <h4>${partido.equipo_a.nombre} vs ${partido.equipo_b.nombre}</h4>
+                        <p class="text-muted">${partido.disciplina.nombre} - ${partido.categoria}</p>
+                        <p>Estado: <span class="badge bg-primary">${partido.estado}</span></p>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 text-center">
+                            <h5>${partido.equipo_a.nombre}</h5>
+                            <div class="display-4">${partido.goles_equipo_a || 0}</div>
+                        </div>
+                        <div class="col-6 text-center">
+                            <h5>${partido.equipo_b.nombre}</h5>
+                            <div class="display-4">${partido.goles_equipo_b || 0}</div>
+                        </div>
+                    </div>
+                `;
+                
+                // Configurar botones según el estado
+                const iniciarBtn = document.getElementById('iniciarPartidoBtn');
+                const finalizarBtn = document.getElementById('finalizarPartidoBtn');
+                
+                if (partido.estado === 'programado') {
+                    iniciarBtn.style.display = 'block';
+                    finalizarBtn.style.display = 'none';
+                } else if (partido.estado === 'en_vivo') {
+                    iniciarBtn.style.display = 'none';
+                    finalizarBtn.style.display = 'block';
+                } else {
+                    iniciarBtn.style.display = 'none';
+                    finalizarBtn.style.display = 'none';
+                }
+                
+                // Configurar event listeners
+                iniciarBtn.onclick = () => cambiarEstadoPartido(partidoId, 'en_vivo');
+                finalizarBtn.onclick = () => cambiarEstadoPartido(partidoId, 'finalizado');
+                
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error al cargar partido:', error);
+                alert('Error al cargar los detalles del partido');
+            });
+    };
+
+    // Función para cambiar estado del partido
+    function cambiarEstadoPartido(partidoId, nuevoEstado) {
+        fetch(`/partidos/api/partidos/${partidoId}/cambiar-estado/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ estado: nuevoEstado })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            alert(`Estado cambiado a: ${nuevoEstado}`);
+            bootstrap.Modal.getInstance(document.getElementById('gestionPartidoModal')).hide();
+            cargarPartidosEnVivo();
+            cargarResultadosRecientes();
+            cargarPartidosDisponibles();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error: ' + error.message);
+        });
+    }
+
+    // Refrescar partidos en vivo
+    document.getElementById('refrescarEnVivoBtn').addEventListener('click', function() {
+        cargarPartidosEnVivo();
+        cargarResultadosRecientes();
+    });    // Inicializar
+    if (puedeGestionar && document.getElementById('registrarResultadoBtn')) {
+        cargarPartidosDisponibles();
+        
+        // Event listener para registrar resultado
+        document.getElementById('registrarResultadoBtn').addEventListener('click', function() {
+            if (!partidoSeleccionado) {
+                alert('Selecciona un partido primero');
+                return;
+            }
+            
+            const golesLocal = parseInt(document.getElementById('golesLocal').value) || 0;
+            const golesVisitante = parseInt(document.getElementById('golesVisitante').value) || 0;
+            
+            // Actualizar los goles del partido
+            fetch(`/partidos/api/partidos/${partidoSeleccionado}/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    goles_equipo_a: golesLocal,
+                    goles_equipo_b: golesVisitante
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                alert('Resultado registrado correctamente');
+                cargarPartidosEnVivo();
+                cargarResultadosRecientes();
+                
+                // Limpiar formulario
+                document.getElementById('golesLocal').value = 0;
+                document.getElementById('golesVisitante').value = 0;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+            });
+        });
+    }
+    cargarPartidosEnVivo();
+    cargarResultadosRecientes();
+
+    // Auto-refrescar cada 30 segundos
+    actualizacionInterval = setInterval(() => {
+        cargarPartidosEnVivo();
+    }, 30000);
+});
+</script>
+{% endblock %}
