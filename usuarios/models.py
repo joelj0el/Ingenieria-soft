@@ -8,9 +8,60 @@ class Carrera(models.Model):
     nombre = models.CharField(max_length=100)
     abreviatura = models.CharField(max_length=10, blank=True)
     activo = models.BooleanField(default=True)
+    puntos_olimpiada = models.IntegerField(default=0, help_text="Puntos acumulados en la olimpiada")
     
     def __str__(self):
         return self.nombre
+    
+    def actualizar_puntos_olimpiada(self):
+        """Recalcular puntos basándose en todos los partidos finalizados de sus equipos"""
+        from partidos.models import Partido
+        
+        puntos_total = 0
+        
+        # Obtener todos los equipos de esta carrera
+        equipos_carrera = self.equipos.all()
+        
+        for equipo in equipos_carrera:
+            # Partidos como local (equipo_a)
+            partidos_local = Partido.objects.filter(
+                equipo_a=equipo,
+                estado='finalizado'
+            )
+            
+            # Partidos como visitante (equipo_b)  
+            partidos_visitante = Partido.objects.filter(
+                equipo_b=equipo,
+                estado='finalizado'
+            )
+            
+            # Calcular puntos de partidos como local
+            for partido in partidos_local:
+                goles_favor = partido.goles_equipo_a or 0
+                goles_contra = partido.goles_equipo_b or 0
+                
+                if goles_favor > goles_contra:
+                    puntos_total += 2000  # Victoria
+                elif goles_favor == goles_contra:
+                    puntos_total += 1000  # Empate
+                # Derrota = 0 puntos
+            
+            # Calcular puntos de partidos como visitante
+            for partido in partidos_visitante:
+                goles_favor = partido.goles_equipo_b or 0
+                goles_contra = partido.goles_equipo_a or 0
+                
+                if goles_favor > goles_contra:
+                    puntos_total += 2000  # Victoria
+                elif goles_favor == goles_contra:
+                    puntos_total += 1000  # Empate
+                # Derrota = 0 puntos
+        
+        # Actualizar puntos
+        self.puntos_olimpiada = puntos_total
+        self.save()
+        
+        return puntos_total
 
 # Modelo de Perfil para extender User
 class Perfil(models.Model):

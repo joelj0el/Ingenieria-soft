@@ -285,6 +285,52 @@
     opacity: 0.5;
 }
 
+/* Estilos para selector de tipo de tabla */
+.tabla-selector {
+    margin-bottom: 1rem;
+}
+
+.tabla-selector .btn-group {
+    width: 100%;
+}
+
+.tabla-selector .btn-check:checked + .btn {
+    background-color: var(--primary-green);
+    border-color: var(--primary-green);
+    color: white;
+}
+
+.tabla-selector .btn-outline-primary {
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+    flex: 1;
+    white-space: nowrap;
+}
+
+.tabla-selector .btn-outline-primary:hover {
+    background-color: var(--primary-green);
+    border-color: var(--primary-green);
+    color: white;
+}
+
+/* Estilos específicos para tabla de carreras */
+.carrera-nombre strong {
+    color: var(--primary-green);
+    font-weight: 600;
+}
+
+.puntos strong {
+    font-size: 1.1em;
+}
+
+.posicion {
+    font-weight: bold;
+}
+
+.posicion .fas {
+    margin-right: 0.5rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .main-content {

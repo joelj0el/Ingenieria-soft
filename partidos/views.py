@@ -1170,3 +1170,54 @@ class LimpiarJornadasAPIView(View):
             print(f"Error al limpiar jornadas: {str(e)}")
             print(f"Traceback: {traceback.format_exc()}")
             return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+
+
+class TablaGeneralCarrerasAPIView(View):
+    def get(self, request):
+        """Generar tabla general de carreras con puntos de olimpiada"""
+        try:
+            from usuarios.models import Carrera
+            
+            # Obtener todas las carreras activas
+            carreras = Carrera.objects.filter(activo=True)
+            
+            if not carreras.exists():
+                return JsonResponse({'error': 'No hay carreras registradas'}, status=404)
+            
+            # Generar tabla de carreras
+            tabla = []
+            for carrera in carreras:
+                # Recalcular puntos para asegurar datos actualizados
+                puntos_actuales = carrera.actualizar_puntos_olimpiada()
+                
+                # Contar equipos de la carrera
+                equipos_carrera = carrera.equipos.all()
+                total_equipos = equipos_carrera.count()
+                
+                tabla.append({
+                    'carrera': {
+                        'id': carrera.id,
+                        'nombre': carrera.nombre,
+                        'abreviatura': carrera.abreviatura or carrera.nombre[:3].upper(),
+                    },
+                    'puntos': puntos_actuales,
+                    'total_equipos': total_equipos
+                })
+            
+            # Ordenar tabla por puntos (descendente)
+            tabla.sort(key=lambda x: -x['puntos'])
+            
+            # Agregar posición
+            for i, carrera in enumerate(tabla, 1):
+                carrera['pos'] = i
+            
+            return JsonResponse({
+                'tipo': 'general_carreras',
+                'tabla': tabla,
+                'total_carreras': len(tabla)
+            })
+            
+        except Exception as e:
+            print(f"Error al generar tabla general de carreras: {str(e)}")
+            print(f"Traceback: {traceback.format_exc()}")
+            return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)

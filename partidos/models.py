@@ -76,8 +76,7 @@ class Partido(models.Model):
           # Si está en vivo, calcular desde los eventos
         puntos_a = self.calcular_puntos_equipo(self.equipo_a)
         puntos_b = self.calcular_puntos_equipo(self.equipo_b)
-        return f"{puntos_a} - {puntos_b}"
-    
+        return f"{puntos_a} - {puntos_b}"    
     def calcular_puntos_equipo(self, equipo):
         """Calcula los puntos actuales de un equipo basándose en los eventos"""
         eventos_equipo = self.eventos.filter(
@@ -87,7 +86,8 @@ class Partido(models.Model):
         )
         total_puntos = sum(evento.valor for evento in eventos_equipo)
         print(f"DEBUG: Equipo {equipo.nombre} - Eventos encontrados: {eventos_equipo.count()}, Total puntos: {total_puntos}")
-        return total_puntos    
+        return total_puntos
+    
     def actualizar_resultado_final(self):
         """Actualiza los campos goles_equipo_a/b basándose en los eventos registrados"""
         if self.estado == 'finalizado':
@@ -100,6 +100,25 @@ class Partido(models.Model):
             self.goles_equipo_a = goles_eventos_a
             self.goles_equipo_b = goles_eventos_b
             self.save()
+            
+            # Actualizar puntos de las carreras automáticamente
+            self.actualizar_puntos_carreras()
+    
+    def actualizar_puntos_carreras(self):
+        """Actualiza los puntos de olimpiada de las carreras de ambos equipos"""
+        try:
+            # Actualizar carrera del equipo A
+            if self.equipo_a.carrera:
+                self.equipo_a.carrera.actualizar_puntos_olimpiada()
+                print(f"DEBUG: Puntos actualizados para carrera {self.equipo_a.carrera.nombre}")
+            
+            # Actualizar carrera del equipo B
+            if self.equipo_b.carrera:
+                self.equipo_b.carrera.actualizar_puntos_olimpiada()
+                print(f"DEBUG: Puntos actualizados para carrera {self.equipo_b.carrera.nombre}")
+                
+        except Exception as e:
+            print(f"ERROR: No se pudieron actualizar puntos de carreras: {str(e)}")
     
     def sincronizar_goles_con_eventos(self):
         """Sincroniza los goles directos con los eventos existentes"""        
