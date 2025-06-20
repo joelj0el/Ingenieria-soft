@@ -29,24 +29,50 @@
                         <select class="form-select" id="partidoSelector">
                             <option value="">Selecciona un partido</option>
                         </select>
-                    </div>
-
-                    <!-- Formulario de registro de goles -->
-                    <div id="formularioResultado" style="display: none;">
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <label for="golesLocal" class="form-label">Goles Local</label>
-                                <input type="number" class="form-control" id="golesLocal" min="0" value="0">
+                    </div>                    <!-- Formulario de registro de goles -->
+                    <div id="formularioResultado" style="display: none;">                        <!-- Marcador actual y controles -->
+                        <div class="mb-4">
+                            <h6 class="text-center text-white">Marcador Actual</h6>
+                            <div class="marcador-container">
+                                <div class="row align-items-center">
+                                    <div class="col-4">
+                                        <div class="text-center">
+                                            <h6 class="equipo-nombre" id="nombreEquipoLocal">Equipo Local</h6>
+                                            <div class="d-flex justify-content-center align-items-center gap-2">
+                                                <button type="button" class="btn btn-danger btn-marcador" id="menosGolLocal" title="Quitar gol">
+                                                    <i class="fas fa-minus"></i>
+                                                </button>
+                                                <span class="marcador-display" id="marcadorLocal">0</span>
+                                                <button type="button" class="btn btn-success btn-marcador" id="masGolLocal" title="Agregar gol">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-center">
+                                            <div class="display-4 text-warning fw-bold">VS</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-center">
+                                            <h6 class="equipo-nombre" id="nombreEquipoVisitante">Equipo Visitante</h6>
+                                            <div class="d-flex justify-content-center align-items-center gap-2">
+                                                <button type="button" class="btn btn-danger btn-marcador" id="menosGolVisitante" title="Quitar gol">
+                                                    <i class="fas fa-minus"></i>
+                                                </button>
+                                                <span class="marcador-display" id="marcadorVisitante">0</span>
+                                                <button type="button" class="btn btn-success btn-marcador" id="masGolVisitante" title="Agregar gol">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-6">
-                                <label for="golesVisitante" class="form-label">Goles Visitante</label>
-                                <input type="number" class="form-control" id="golesVisitante" min="0" value="0">
-                            </div>
-                        </div>
-
-                        <!-- Registro de evento individual -->
+                        </div><!-- Registro de evento individual -->
                         <div class="mb-3">
-                            <h6>Registrar Evento</h6>
+                            <h6>Registrar Evento Adicional</h6>
                             <div class="row">
                                 <div class="col-4">
                                     <select class="form-select" id="equipoEvento">
@@ -70,13 +96,7 @@
                                     </button>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Botones de acción -->
-                        <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-success" id="registrarResultadoBtn">
-                                <i class="fas fa-save"></i> Registrar Resultado
-                            </button>
+                            <small class="text-muted">Los goles se registran automáticamente con los botones de arriba. Usa esto solo para eventos especiales.</small>
                         </div>
                     </div>
                     {% else %}
@@ -254,6 +274,42 @@
     border-left-color: #ffc107;
     background-color: rgba(255, 193, 7, 0.1);
 }
+
+/* Estilos para los botones de marcador */
+.btn-marcador {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.marcador-display {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #28a745;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    min-width: 80px;
+    display: inline-block;
+    text-align: center;
+}
+
+.marcador-container {
+    background: rgba(40, 167, 69, 0.1);
+    border: 2px solid #28a745;
+    border-radius: 15px;
+    padding: 20px;
+    margin: 10px 0;
+}
+
+.equipo-nombre {
+    color: #ffffff;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
 </style>
 
 <script>
@@ -377,9 +433,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('Error al cargar resultados recientes:', error);
             });
-    }
-
-    // Evento: cambio de partido seleccionado
+    }    // Evento: cambio de partido seleccionado
     document.getElementById('partidoSelector').addEventListener('change', function() {
         const partidoId = this.value;
         const formulario = document.getElementById('formularioResultado');
@@ -388,22 +442,169 @@ document.addEventListener('DOMContentLoaded', function() {
             partidoSeleccionado = partidoId;
             formulario.style.display = 'block';
             
-            // Cargar equipos del partido
+            // Cargar equipos del partido y configurar la interfaz
             fetch(`/partidos/api/partidos/${partidoId}/`)
                 .then(response => response.json())
                 .then(partido => {
+                    // Configurar nombres de equipos
+                    document.getElementById('nombreEquipoLocal').textContent = partido.equipo_a.nombre;
+                    document.getElementById('nombreEquipoVisitante').textContent = partido.equipo_b.nombre;
+                    
+                    // Mostrar marcador actual
+                    document.getElementById('marcadorLocal').textContent = partido.goles_equipo_a || 0;
+                    document.getElementById('marcadorVisitante').textContent = partido.goles_equipo_b || 0;
+                    
+                    // Configurar selector de equipos para eventos individuales
                     const equipoSelect = document.getElementById('equipoEvento');
                     equipoSelect.innerHTML = `
                         <option value="">Equipo</option>
                         <option value="${partido.equipo_a.id}">${partido.equipo_a.nombre}</option>
                         <option value="${partido.equipo_b.id}">${partido.equipo_b.nombre}</option>
                     `;
+                    
+                    // Configurar event listeners para los botones
+                    configurarBotonesGoles(partidoId, partido);
                 });
         } else {
             formulario.style.display = 'none';
             partidoSeleccionado = null;
         }
-    });
+    });    // Función para configurar los botones de goles
+    function configurarBotonesGoles(partidoId, partido) {
+        // Botones para equipo local
+        document.getElementById('masGolLocal').onclick = () => {
+            registrarGolRapido(partidoId, partido.equipo_a.id, 1);
+        };
+        
+        document.getElementById('menosGolLocal').onclick = () => {
+            const marcadorActual = parseInt(document.getElementById('marcadorLocal').textContent);
+            if (marcadorActual > 0) {
+                registrarGolRapido(partidoId, partido.equipo_a.id, -1);
+            } else {
+                alert('No se pueden tener goles negativos');
+            }
+        };
+        
+        // Botones para equipo visitante
+        document.getElementById('masGolVisitante').onclick = () => {
+            registrarGolRapido(partidoId, partido.equipo_b.id, 1);
+        };
+        
+        document.getElementById('menosGolVisitante').onclick = () => {
+            const marcadorActual = parseInt(document.getElementById('marcadorVisitante').textContent);
+            if (marcadorActual > 0) {
+                registrarGolRapido(partidoId, partido.equipo_b.id, -1);
+            } else {
+                alert('No se pueden tener goles negativos');
+            }
+        };
+    }// Función para registrar gol rápido (+ o -)
+    function registrarGolRapido(partidoId, equipoId, valor) {
+        // Registrar el evento (positivo o negativo)
+        fetch(`/partidos/api/partidos/${partidoId}/registrar-evento/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                equipo_id: equipoId,
+                tipo_evento: 'gol',
+                valor: valor, // Puede ser 1 o -1
+                descripcion: valor > 0 ? 'Gol agregado' : 'Gol eliminado'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Error: ' + data.error);
+            } else {
+                console.log('Evento registrado:', data);
+                
+                // Actualizar el marcador en la tabla partidos basándose en los eventos
+                actualizarMarcadorDesdeEventos(partidoId);
+                
+                // Refrescar partidos en vivo
+                setTimeout(() => {
+                    cargarPartidosEnVivo();
+                }, 500);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al procesar gol: ' + error.message);
+        });
+    }
+
+    // Función para actualizar marcador basándose en eventos
+    function actualizarMarcadorDesdeEventos(partidoId) {
+        // Obtener todos los eventos del partido
+        fetch(`/partidos/api/partidos/${partidoId}/eventos/`)
+            .then(response => response.json())
+            .then(eventosData => {
+                const eventos = eventosData.eventos || [];
+                const partido = eventosData.partido;
+                
+                // Calcular goles de cada equipo basándose en eventos
+                let golesEquipoA = 0;
+                let golesEquipoB = 0;
+                
+                eventos.forEach(evento => {
+                    if (evento.tipo_evento === 'Gol' || evento.tipo_evento === 'Punto') {
+                        if (evento.equipo === partido.equipo_a) {
+                            golesEquipoA += evento.valor;
+                        } else if (evento.equipo === partido.equipo_b) {
+                            golesEquipoB += evento.valor;
+                        }
+                    }
+                });
+                
+                // Asegurar que no haya valores negativos
+                golesEquipoA = Math.max(0, golesEquipoA);
+                golesEquipoB = Math.max(0, golesEquipoB);
+                
+                console.log('Goles calculados:', golesEquipoA, '-', golesEquipoB);
+                
+                // Actualizar el marcador en la tabla partidos
+                return fetch(`/partidos/api/partidos/${partidoId}/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        goles_equipo_a: golesEquipoA,
+                        goles_equipo_b: golesEquipoB
+                    })
+                });
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error al actualizar marcador:', data.error);
+                } else {
+                    console.log('Marcador actualizado correctamente');
+                    // Actualizar marcador visual
+                    actualizarMarcadorVisual(partidoId);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+    // Función para actualizar el marcador visual
+    function actualizarMarcadorVisual(partidoId) {
+        fetch(`/partidos/api/partidos/${partidoId}/`)
+            .then(response => response.json())
+            .then(partido => {
+                document.getElementById('marcadorLocal').textContent = partido.goles_equipo_a || 0;
+                document.getElementById('marcadorVisitante').textContent = partido.goles_equipo_b || 0;
+            })
+            .catch(error => {
+                console.error('Error al actualizar marcador visual:', error);
+            });
+    }
 
     // Registrar evento
     document.getElementById('registrarEventoBtn')?.addEventListener('click', function() {
@@ -629,51 +830,10 @@ document.addEventListener('DOMContentLoaded', function() {
         cargarPartidosEnVivo();
         cargarResultadosRecientes();
     });    // Inicializar
-    if (puedeGestionar && document.getElementById('registrarResultadoBtn')) {
+    if (puedeGestionar) {
         cargarPartidosDisponibles();
-        
-        // Event listener para registrar resultado
-        document.getElementById('registrarResultadoBtn').addEventListener('click', function() {
-            if (!partidoSeleccionado) {
-                alert('Selecciona un partido primero');
-                return;
-            }
-            
-            const golesLocal = parseInt(document.getElementById('golesLocal').value) || 0;
-            const golesVisitante = parseInt(document.getElementById('golesVisitante').value) || 0;
-            
-            // Actualizar los goles del partido
-            fetch(`/partidos/api/partidos/${partidoSeleccionado}/`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({
-                    goles_equipo_a: golesLocal,
-                    goles_equipo_b: golesVisitante
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
-                alert('Resultado registrado correctamente');
-                cargarPartidosEnVivo();
-                cargarResultadosRecientes();
-                
-                // Limpiar formulario
-                document.getElementById('golesLocal').value = 0;
-                document.getElementById('golesVisitante').value = 0;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error: ' + error.message);
-            });
-        });
     }
+    
     cargarPartidosEnVivo();
     cargarResultadosRecientes();
 
