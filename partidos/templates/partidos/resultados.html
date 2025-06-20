@@ -129,46 +129,19 @@
                 <div id="partidoDetalles">
                     <!-- Se llenará dinámicamente -->
                 </div>
-                
-                <!-- Botones de cambio de estado -->
-                <div class="row mt-4">
-                    <div class="col-md-4">
-                        <button type="button" class="btn btn-warning w-100" id="iniciarPartidoBtn">
-                            <i class="fas fa-play"></i> Iniciar Partido
-                        </button>
+                  <!-- Estadísticas del partido -->
+                <div class="mt-4">
+                    <h6 class="text-white">Estadísticas del Partido</h6>
+                    <div class="row" id="estadisticasPartido">
+                        <!-- Se llenará dinámicamente -->
                     </div>
-                    <div class="col-md-4">
-                        <button type="button" class="btn btn-info w-100" id="actualizarScoreBtn">
-                            <i class="fas fa-refresh"></i> Actualizar Score
-                        </button>
-                    </div>
-                    <div class="col-md-4">
-                        <button type="button" class="btn btn-success w-100" id="finalizarPartidoBtn">
-                            <i class="fas fa-flag-checkered"></i> Finalizar Partido
-                        </button>
-                    </div>                </div>
+                </div>
 
-                <!-- Controles para registrar eventos (solo en partidos en vivo) -->
-                <div id="controlesEventos" class="mt-4" style="display: none;">
-                    <h6 class="text-white">Registrar Eventos</h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="text-center">
-                                <h6 class="text-white" id="nombreEquipoA">Equipo A</h6>
-                                <button type="button" class="btn btn-success btn-sm" id="golEquipoA">
-                                    <i class="fas fa-plus"></i> +1 Gol
-                                </button>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="text-center">
-                                <h6 class="text-white" id="nombreEquipoB">Equipo B</h6>
-                                <button type="button" class="btn btn-success btn-sm" id="golEquipoB">
-                                    <i class="fas fa-plus"></i> +1 Gol
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                <!-- Botón de finalizar partido -->
+                <div class="mt-4 text-center">
+                    <button type="button" class="btn btn-success" id="finalizarPartidoBtn" style="display: none;">
+                        <i class="fas fa-flag-checkered"></i> Finalizar Partido
+                    </button>
                 </div>
 
                 <!-- Historial de eventos -->
@@ -506,47 +479,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 `;
-                  // Configurar botones según el estado
-                const iniciarBtn = document.getElementById('iniciarPartidoBtn');
+                
+                // Cargar estadísticas del partido
+                cargarEstadisticasPartido(partidoId);
+                
+                // Configurar botón según el estado
                 const finalizarBtn = document.getElementById('finalizarPartidoBtn');
-                const controlesEventos = document.getElementById('controlesEventos');
                 
-                if (partido.estado === 'programado') {
-                    iniciarBtn.style.display = 'block';
-                    finalizarBtn.style.display = 'none';
-                    controlesEventos.style.display = 'none';
-                } else if (partido.estado === 'en_vivo') {
-                    iniciarBtn.style.display = 'none';
+                if (partido.estado === 'en_vivo') {
                     finalizarBtn.style.display = 'block';
-                    controlesEventos.style.display = 'block';
-                    
-                    // Configurar nombres de equipos en controles de eventos
-                    document.getElementById('nombreEquipoA').textContent = partido.equipo_a.nombre;
-                    document.getElementById('nombreEquipoB').textContent = partido.equipo_b.nombre;
+                    finalizarBtn.onclick = () => cambiarEstadoPartido(partidoId, 'finalizado');
                 } else {
-                    iniciarBtn.style.display = 'none';
                     finalizarBtn.style.display = 'none';
-                    controlesEventos.style.display = 'none';
-                }
-                  // Configurar event listeners
-                iniciarBtn.onclick = () => cambiarEstadoPartido(partidoId, 'en_vivo');
-                finalizarBtn.onclick = () => cambiarEstadoPartido(partidoId, 'finalizado');
-                  // Configurar botón de actualizar score
-                const actualizarBtn = document.getElementById('actualizarScoreBtn');
-                if (actualizarBtn) {
-                    actualizarBtn.onclick = () => actualizarMarcadorEnVivo(partidoId);
-                }
-                
-                // Configurar botones de registrar goles
-                const golEquipoABtn = document.getElementById('golEquipoA');
-                const golEquipoBBtn = document.getElementById('golEquipoB');
-                
-                if (golEquipoABtn) {
-                    golEquipoABtn.onclick = () => registrarGol(partidoId, partido.equipo_a.id);
-                }
-                
-                if (golEquipoBBtn) {
-                    golEquipoBBtn.onclick = () => registrarGol(partidoId, partido.equipo_b.id);
                 }
                 
                 modal.show();
@@ -554,64 +498,101 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('Error al cargar partido:', error);
                 alert('Error al cargar los detalles del partido');
-            });    };
-
-    // Función para registrar un gol
-    function registrarGol(partidoId, equipoId) {
-        fetch(`/partidos/api/partidos/${partidoId}/registrar-evento/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify({
-                tipo_evento: 'gol',
-                equipo_id: equipoId,
-                valor: 1
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            // Actualizar el marcador automáticamente
-            actualizarMarcadorEnVivo(partidoId);
-            alert('¡Gol registrado!');
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error al registrar gol: ' + error.message);
-        });
-    }
-
-    // Función para actualizar marcador en vivo
-    function actualizarMarcadorEnVivo(partidoId) {
-        fetch(`/partidos/api/partidos/${partidoId}/`)
+            });
+    };    // Función para cargar estadísticas del partido
+    function cargarEstadisticasPartido(partidoId) {
+        fetch(`/partidos/api/partidos/${partidoId}/eventos/`)
             .then(response => response.json())
-            .then(partido => {
-                // Actualizar los marcadores mostrados en el modal
-                const scoreA = document.querySelector('#gestionPartidoModal .marcador-local .score');
-                const scoreB = document.querySelector('#gestionPartidoModal .marcador-visitante .score');
+            .then(data => {
+                const estadisticasContainer = document.getElementById('estadisticasPartido');
                 
-                if (scoreA && scoreB) {
-                    // Usar puntos en vivo si el partido está en curso, sino los goles finales
-                    const puntosA = partido.estado === 'en_vivo' ? partido.puntos_en_vivo_a : (partido.goles_equipo_a || 0);
-                    const puntosB = partido.estado === 'en_vivo' ? partido.puntos_en_vivo_b : (partido.goles_equipo_b || 0);
-                    
-                    scoreA.textContent = puntosA;
-                    scoreB.textContent = puntosB;
-                }
+                // Contar eventos por equipo y tipo
+                const estadisticas = {
+                    [data.partido.equipo_a]: { goles: 0, tarjetas_amarillas: 0, tarjetas_rojas: 0, otros: 0 },
+                    [data.partido.equipo_b]: { goles: 0, tarjetas_amarillas: 0, tarjetas_rojas: 0, otros: 0 }
+                };
                 
-                // También actualizar la lista de partidos en vivo
-                cargarPartidosEnVivo();
+                // Procesar eventos
+                data.eventos.forEach(evento => {
+                    const equipo = evento.equipo;
+                    if (estadisticas[equipo]) {
+                        switch(evento.tipo_evento) {
+                            case 'Gol':
+                            case 'Punto':
+                                estadisticas[equipo].goles += evento.valor;
+                                break;
+                            case 'Tarjeta Amarilla':
+                                estadisticas[equipo].tarjetas_amarillas++;
+                                break;
+                            case 'Tarjeta Roja':
+                                estadisticas[equipo].tarjetas_rojas++;
+                                break;
+                            default:
+                                estadisticas[equipo].otros++;
+                        }
+                    }
+                });
                 
-                alert('Marcador actualizado');
+                // Mostrar estadísticas
+                let html = `
+                    <div class="col-6">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body text-center">
+                                <h6>${data.partido.equipo_a}</h6>
+                                <div class="row">
+                                    <div class="col-3">
+                                        <small>⚽ Goles</small>
+                                        <div class="fw-bold">${estadisticas[data.partido.equipo_a].goles}</div>
+                                    </div>
+                                    <div class="col-3">
+                                        <small>🟨 T.A.</small>
+                                        <div class="fw-bold">${estadisticas[data.partido.equipo_a].tarjetas_amarillas}</div>
+                                    </div>
+                                    <div class="col-3">
+                                        <small>🟥 T.R.</small>
+                                        <div class="fw-bold">${estadisticas[data.partido.equipo_a].tarjetas_rojas}</div>
+                                    </div>
+                                    <div class="col-3">
+                                        <small>📊 Otros</small>
+                                        <div class="fw-bold">${estadisticas[data.partido.equipo_a].otros}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card bg-dark text-white">
+                            <div class="card-body text-center">
+                                <h6>${data.partido.equipo_b}</h6>
+                                <div class="row">
+                                    <div class="col-3">
+                                        <small>⚽ Goles</small>
+                                        <div class="fw-bold">${estadisticas[data.partido.equipo_b].goles}</div>
+                                    </div>
+                                    <div class="col-3">
+                                        <small>🟨 T.A.</small>
+                                        <div class="fw-bold">${estadisticas[data.partido.equipo_b].tarjetas_amarillas}</div>
+                                    </div>
+                                    <div class="col-3">
+                                        <small>🟥 T.R.</small>
+                                        <div class="fw-bold">${estadisticas[data.partido.equipo_b].tarjetas_rojas}</div>
+                                    </div>
+                                    <div class="col-3">
+                                        <small>📊 Otros</small>
+                                        <div class="fw-bold">${estadisticas[data.partido.equipo_b].otros}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                estadisticasContainer.innerHTML = html;
             })
             .catch(error => {
-                console.error('Error al actualizar marcador:', error);
-                alert('Error al actualizar el marcador');
+                console.error('Error al cargar estadísticas:', error);
+                document.getElementById('estadisticasPartido').innerHTML = 
+                    '<div class="col-12 text-center text-muted">Error al cargar estadísticas</div>';
             });
     }
 
