@@ -10,13 +10,15 @@
     <div class="partidos-header">
         <h1 class="partidos-title">Gestión de Partidos</h1>
         <small class="text-muted">Programa y gestiona encuentros deportivos</small>
-        {% if is_admin %}
-        <div class="partidos-actions mt-3">
+        {% if is_admin %}        <div class="partidos-actions mt-3">
             <button id="generarFixtureBtn" class="btn btn-success me-2">
                 <i class="fas fa-calendar-plus"></i> Generar Fixtures
             </button>
-            <button id="nuevoPartidoBtn" class="btn btn-primary">
+            <button id="nuevoPartidoBtn" class="btn btn-primary me-2">
                 <i class="fas fa-plus-circle"></i> Nuevo Partido
+            </button>
+            <button id="limpiarJornadasBtn" class="btn btn-danger">
+                <i class="fas fa-trash-alt"></i> Limpiar Jornadas
             </button>
         </div>
         {% endif %}
@@ -485,14 +487,13 @@
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     let partidos = [];
-    let currentEditingPartidoId = null;
-
-    // Event listeners principales
+    let currentEditingPartidoId = null;    // Event listeners principales
     document.getElementById('generarFixtureBtn')?.addEventListener('click', prepararGenerarFixture);
     document.getElementById('nuevoPartidoBtn')?.addEventListener('click', prepararNuevoPartido);
+    document.getElementById('limpiarJornadasBtn')?.addEventListener('click', limpiarJornadas);
     document.getElementById('generarFixtureSubmitBtn')?.addEventListener('click', generarFixture);
     document.getElementById('crearPartidoBtn')?.addEventListener('click', crearPartido);
-    document.getElementById('actualizarPartidoBtn')?.addEventListener('click', actualizarPartido);    // Event listeners para filtros
+    document.getElementById('actualizarPartidoBtn')?.addEventListener('click', actualizarPartido);// Event listeners para filtros
     document.getElementById('filtroEstado')?.addEventListener('change', aplicarFiltros);
     document.getElementById('filtroDisciplina')?.addEventListener('change', aplicarFiltros);
     document.getElementById('filtroCategoria')?.addEventListener('change', aplicarFiltros);
@@ -622,6 +623,72 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const modal = new bootstrap.Modal(document.getElementById('generarFixtureModal'));
         modal.show();
+    }
+
+    function limpiarJornadas() {
+        // Confirmación múltiple para evitar errores
+        const confirmacion1 = confirm(
+            '⚠️ ADVERTENCIA: Esta acción eliminará TODOS los fixtures y partidos generados automáticamente.\n\n' +
+            '🚨 Esto incluye:\n' +
+            '- Todos los fixtures de todas las disciplinas\n' +
+            '- Todos los partidos programados generados automáticamente\n' +
+            '- Los registros de FixtureGenerado\n\n' +
+            '❗ Los partidos creados manualmente NO se eliminarán.\n\n' +
+            '¿Estás seguro de que quieres continuar?'
+        );
+        
+        if (!confirmacion1) {
+            return;
+        }
+        
+        const confirmacion2 = confirm(
+            '🔥 ÚLTIMA CONFIRMACIÓN 🔥\n\n' +
+            'Esta acción es IRREVERSIBLE y eliminará todos los fixtures.\n\n' +
+            'Escribe mentalmente "CONFIRMO" y presiona OK si realmente quieres proceder.'
+        );
+        
+        if (!confirmacion2) {
+            return;
+        }
+        
+        // Mostrar indicador de carga
+        const btn = document.getElementById('limpiarJornadasBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+        btn.disabled = true;
+        
+        // Realizar la limpieza
+        fetch('/partidos/api/limpiar-jornadas/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            alert(`✅ Limpieza completada:\n\n` +
+                  `📊 Fixtures eliminados: ${data.fixtures_eliminados}\n` +
+                  `🏆 Partidos eliminados: ${data.partidos_eliminados}\n` +
+                  `📝 Eventos eliminados: ${data.eventos_eliminados}\n\n` +
+                  `La página se actualizará automáticamente.`);
+            
+            // Recargar la página para mostrar los cambios
+            window.location.reload();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ Error al limpiar jornadas: ' + error.message);
+        })
+        .finally(() => {
+            // Restaurar botón
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
     }
 
     function cargarEstadoFixture() {

@@ -25,4 +25,7 @@ urlpatterns = [
     path('api/dashboard/partidos-recientes/', views.PartidosRecientesAPIView.as_view(), name='partidos_recientes'),
     path('api/dashboard/tabla-posiciones/', views.TablaPosicionesAPIView.as_view(), name='tabla_posiciones'),
     path('api/tabla-posiciones/', views.TablaPosicionesAPIView.as_view(), name='tabla_posiciones_alt'),
+    
+    # API para limpiar jornadas
+    path('api/limpiar-jornadas/', views.LimpiarJornadasAPIView.as_view(), name='limpiar_jornadas'),
 ]

@@ -1121,3 +1121,52 @@ class TablaPosicionesAPIView(View):
             print(f"Error al generar tabla de posiciones: {str(e)}")
             print(f"Traceback: {traceback.format_exc()}")
             return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+
+
+class LimpiarJornadasAPIView(View):
+    @method_decorator(login_required)
+    @method_decorator(csrf_exempt)
+    def post(self, request):
+        """Eliminar todos los fixtures y partidos generados automáticamente (solo super administradores)"""
+        try:
+            # Verificar si el usuario es administrativo
+            try:
+                perfil = Perfil.objects.get(usuario=request.user)
+                if perfil.rol != 'administrativo' or perfil.estado_verificacion != 'aprobado':
+                    return JsonResponse({'error': 'Solo los administradores pueden limpiar jornadas'}, status=403)
+            except Perfil.DoesNotExist:
+                return JsonResponse({'error': 'Acceso denegado'}, status=403)
+            
+            # Contadores para el reporte
+            fixtures_eliminados = 0
+            partidos_eliminados = 0
+            eventos_eliminados = 0
+            
+            # 1. Obtener todos los partidos generados por fixture (es_fixture=True)
+            partidos_fixture = Partido.objects.filter(es_fixture=True)
+            
+            # 2. Eliminar eventos de estos partidos
+            for partido in partidos_fixture:
+                eventos_count = partido.eventos.count()
+                eventos_eliminados += eventos_count
+                partido.eventos.all().delete()
+            
+            # 3. Eliminar los partidos de fixture
+            partidos_eliminados = partidos_fixture.count()
+            partidos_fixture.delete()
+            
+            # 4. Eliminar todos los registros de fixtures generados
+            fixtures_eliminados = FixtureGenerado.objects.count()
+            FixtureGenerado.objects.all().delete()
+            
+            return JsonResponse({
+                'message': 'Jornadas limpiadas correctamente',
+                'fixtures_eliminados': fixtures_eliminados,
+                'partidos_eliminados': partidos_eliminados,
+                'eventos_eliminados': eventos_eliminados
+            })
+        
+        except Exception as e:
+            print(f"Error al limpiar jornadas: {str(e)}")
+            print(f"Traceback: {traceback.format_exc()}")
+            return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
