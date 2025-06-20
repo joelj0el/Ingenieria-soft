@@ -382,16 +382,15 @@ function cargarTablaPosiciones(disciplinaId, categoria = 'masculino') {
                                 <th>Pts</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            ${tabla.map((item, index) => `
+                        <tbody>                            ${tabla.map((item, index) => `
                                 <tr>
                                     <td class="posicion">${index + 1}</td>
                                     <td class="equipo-nombre">${item.equipo ? item.equipo.nombre : item.nombre}</td>
-                                    <td>${item.pj || item.partidos_jugados}</td>
-                                    <td>${item.g || item.ganados}</td>
-                                    <td>${item.e || item.empatados}</td>
-                                    <td>${item.p || item.perdidos}</td>
-                                    <td class="puntos">${item.pts || item.puntos}</td>
+                                    <td>${(item.pj || item.partidos_jugados || 0)}</td>
+                                    <td>${(item.g || item.ganados || 0)}</td>
+                                    <td>${(item.e || item.empatados || 0)}</td>
+                                    <td>${(item.p || item.perdidos || 0)}</td>
+                                    <td class="puntos">${(item.pts || item.puntos || 0)}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
