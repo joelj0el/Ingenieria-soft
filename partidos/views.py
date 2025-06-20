@@ -246,8 +246,7 @@ class PartidoDetailAPIView(View):
                 try:
                     partido.hora = datetime.strptime(data['hora'], '%H:%M').time()
                 except ValueError:
-                    return JsonResponse({'error': 'Formato de hora inválido'}, status=400)
-            
+                    return JsonResponse({'error': 'Formato de hora inválido'}, status=400)            
             if 'lugar' in data:
                 partido.lugar = data['lugar']
             
@@ -257,13 +256,22 @@ class PartidoDetailAPIView(View):
                 else:
                     return JsonResponse({'error': 'Estado inválido'}, status=400)
             
+            # Flag para saber si se actualizaron goles manualmente
+            goles_actualizados = False
+            
             if 'goles_equipo_a' in data:
                 partido.goles_equipo_a = data['goles_equipo_a']
+                goles_actualizados = True
             
             if 'goles_equipo_b' in data:
                 partido.goles_equipo_b = data['goles_equipo_b']
+                goles_actualizados = True
             
             partido.save()
+            
+            # Si se actualizaron goles manualmente, sincronizar con eventos
+            if goles_actualizados:
+                partido.sincronizar_goles_con_eventos()
             
             return JsonResponse({
                 'id': partido.id,
@@ -711,11 +719,15 @@ class CambiarEstadoPartidoAPIView(View):
                 return JsonResponse({'error': 'Estado inválido'}, status=400)
             
             estado_anterior = partido.estado
-            partido.estado = nuevo_estado
-            
-            # Si se finaliza el partido, actualizar resultado basándose en eventos
+            partido.estado = nuevo_estado            # Si se finaliza el partido, sincronizar goles y eventos
             if nuevo_estado == 'finalizado':
+                # Primero limpiar eventos duplicados
+                duplicados_eliminados = partido.limpiar_eventos_duplicados()
+                # Luego sincronizar goles manuales con eventos
+                partido.sincronizar_goles_con_eventos()
+                # Finalmente actualizar resultado final
                 partido.actualizar_resultado_final()
+                print(f"DEBUG: Finalizando partido {partido.id} - Duplicados eliminados: {duplicados_eliminados}")
             
             partido.save()
             

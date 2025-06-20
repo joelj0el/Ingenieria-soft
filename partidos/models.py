@@ -73,8 +73,7 @@ class Partido(models.Model):
         # Si el partido está finalizado, usar los goles oficiales
         if self.estado == 'finalizado' and self.goles_equipo_a is not None and self.goles_equipo_b is not None:
             return f"{self.goles_equipo_a} - {self.goles_equipo_b}"
-        
-        # Si está en vivo, calcular desde los eventos
+          # Si está en vivo, calcular desde los eventos
         puntos_a = self.calcular_puntos_equipo(self.equipo_a)
         puntos_b = self.calcular_puntos_equipo(self.equipo_b)
         return f"{puntos_a} - {puntos_b}"
@@ -86,14 +85,62 @@ class Partido(models.Model):
             activo=True,
             tipo_evento__in=['gol', 'punto']
         )
-        return sum(evento.valor for evento in eventos_equipo)
-    
+        total_puntos = sum(evento.valor for evento in eventos_equipo)
+        print(f"DEBUG: Equipo {equipo.nombre} - Eventos encontrados: {eventos_equipo.count()}, Total puntos: {total_puntos}")
+        return total_puntos    
     def actualizar_resultado_final(self):
         """Actualiza los campos goles_equipo_a/b basándose en los eventos registrados"""
         if self.estado == 'finalizado':
-            self.goles_equipo_a = self.calcular_puntos_equipo(self.equipo_a)
-            self.goles_equipo_b = self.calcular_puntos_equipo(self.equipo_b)
+            # SIEMPRE usar los eventos como fuente de verdad al finalizar
+            goles_eventos_a = self.calcular_puntos_equipo(self.equipo_a)
+            goles_eventos_b = self.calcular_puntos_equipo(self.equipo_b)
+            
+            print(f"DEBUG: Finalizando partido - Goles de eventos: {goles_eventos_a} - {goles_eventos_b}")
+            
+            self.goles_equipo_a = goles_eventos_a
+            self.goles_equipo_b = goles_eventos_b
             self.save()
+    
+    def sincronizar_goles_con_eventos(self):
+        """Sincroniza los goles directos con los eventos existentes"""        
+        # Obtener goles actuales de los campos directos
+        goles_directos_a = self.goles_equipo_a or 0
+        goles_directos_b = self.goles_equipo_b or 0
+        
+        # Obtener goles de eventos
+        goles_eventos_a = self.calcular_puntos_equipo(self.equipo_a)
+        goles_eventos_b = self.calcular_puntos_equipo(self.equipo_b)
+        
+        # Si hay diferencia, crear eventos para compensar
+        if goles_directos_a > goles_eventos_a:
+            diferencia = goles_directos_a - goles_eventos_a
+            for _ in range(diferencia):
+                # Usar apps.get_model para evitar importación circular
+                from django.apps import apps
+                EventoPartido = apps.get_model('partidos', 'EventoPartido')
+                EventoPartido.objects.create(
+                    partido=self,
+                    equipo=self.equipo_a,
+                    tipo_evento='gol',
+                    valor=1,
+                    descripcion='Gol registrado manualmente - sincronización',
+                    registrado_por_id=self.creado_por_id
+                )
+        
+        if goles_directos_b > goles_eventos_b:
+            diferencia = goles_directos_b - goles_eventos_b
+            for _ in range(diferencia):
+                # Usar apps.get_model para evitar importación circular
+                from django.apps import apps
+                EventoPartido = apps.get_model('partidos', 'EventoPartido')
+                EventoPartido.objects.create(
+                    partido=self,
+                    equipo=self.equipo_b,
+                    tipo_evento='gol',
+                    valor=1,
+                    descripcion='Gol registrado manualmente - sincronización',
+                    registrado_por_id=self.creado_por_id
+                )
     
     @property
     def puede_registrar_eventos(self):
@@ -131,6 +178,43 @@ class Partido(models.Model):
         # Verificar que la categoría del partido coincida con la de los equipos
         if self.categoria != self.equipo_a.categoria:
             raise ValidationError('La categoría del partido debe coincidir con la de los equipos')
+
+    def limpiar_eventos_duplicados(self):
+        """Elimina eventos duplicados basándose en equipo, tipo_evento y timestamp cercano"""
+        from django.db.models import Count
+        from datetime import timedelta
+        
+        # Obtener eventos del partido ordenados por timestamp
+        eventos = self.eventos.filter(activo=True).order_by('timestamp')
+        
+        eventos_a_eliminar = []
+        eventos_procesados = []
+        
+        for evento in eventos:
+            # Buscar eventos similares en un rango de 5 segundos
+            timestamp_inicio = evento.timestamp - timedelta(seconds=5)
+            timestamp_fin = evento.timestamp + timedelta(seconds=5)
+            
+            eventos_similares = [
+                e for e in eventos_procesados 
+                if (e.equipo == evento.equipo and 
+                    e.tipo_evento == evento.tipo_evento and
+                    timestamp_inicio <= e.timestamp <= timestamp_fin)
+            ]
+            
+            if eventos_similares:
+                # Es un duplicado, marcarlo para eliminación
+                eventos_a_eliminar.append(evento.id)
+            else:
+                # Es único, agregarlo a procesados
+                eventos_procesados.append(evento)
+        
+        # Eliminar eventos duplicados
+        if eventos_a_eliminar:
+            self.eventos.filter(id__in=eventos_a_eliminar).update(activo=False)
+            print(f"DEBUG: Eliminados {len(eventos_a_eliminar)} eventos duplicados")
+        
+        return len(eventos_a_eliminar)
 
 class FixtureGenerado(models.Model):
     """Modelo para llevar registro de los fixtures generados"""
