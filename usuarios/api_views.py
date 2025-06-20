@@ -183,6 +183,43 @@ class DisciplinaViewSet(viewsets.ModelViewSet):
         except Perfil.DoesNotExist:
             raise serializers.ValidationError("No tiene permisos para crear disciplinas")
         serializer.save()
+    
+    def destroy(self, request, *args, **kwargs):
+        """Eliminar disciplina con confirmación de contraseña"""
+        try:
+            # Verificar si el usuario es administrativo
+            perfil = Perfil.objects.get(usuario=request.user)
+            if perfil.rol != 'administrativo' or perfil.estado_verificacion != 'aprobado':
+                return Response({"error": "No tiene permisos para eliminar disciplinas"}, 
+                              status=status.HTTP_403_FORBIDDEN)
+            
+            # Verificar la contraseña del administrador
+            admin_password = request.data.get('admin_password')
+            if not admin_password:
+                return Response({"error": "Se requiere la contraseña del administrador"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+            
+            if not request.user.check_password(admin_password):
+                return Response({"error": "Contraseña incorrecta"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+            
+            # Obtener la disciplina
+            disciplina = self.get_object()
+            disciplina_nombre = disciplina.nombre
+            
+            # Eliminar la disciplina (esto eliminará en cascada los equipos y partidos relacionados)
+            disciplina.delete()
+            
+            return Response({
+                "message": f"Disciplina '{disciplina_nombre}' eliminada correctamente"
+            }, status=status.HTTP_200_OK)
+            
+        except Perfil.DoesNotExist:
+            return Response({"error": "No tiene permisos para eliminar disciplinas"}, 
+                          status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response({"error": f"Error al eliminar disciplina: {str(e)}"}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class EquipoViewSet(viewsets.ModelViewSet):
     queryset = Equipo.objects.all()

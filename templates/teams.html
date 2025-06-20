@@ -9,11 +9,13 @@
 <div class="teams-container">
     {% csrf_token %}
     <div class="teams-header">
-        <h1 class="teams-title">Equipos OLIMPAZ</h1>
-        {% if is_admin %}
+        <h1 class="teams-title">Equipos OLIMPAZ</h1>        {% if is_admin %}
         <div class="teams-actions">
             <button id="addDisciplinaBtn" class="btn btn-success me-2">
                 <i class="fas fa-plus-circle"></i> Nueva Disciplina
+            </button>
+            <button id="deleteDisciplinaBtn" class="btn btn-danger me-2">
+                <i class="fas fa-trash-alt"></i> Eliminar Disciplina
             </button>
             <button id="addTeamBtn" class="btn btn-primary">
                 <i class="fas fa-plus-circle"></i> Nuevo Equipo
@@ -280,21 +282,42 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content dark-modal">
             <div class="modal-header">
-                <h5 class="modal-title" id="deleteDisciplinaModalLabel">Confirmar Eliminación</h5>
+                <h5 class="modal-title" id="deleteDisciplinaModalLabel">Eliminar Disciplina</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>¿Estás seguro de que deseas eliminar la disciplina <span id="deleteDisciplinaName" class="fw-bold"></span>?</p>
-                <p class="text-danger">Esta acción no se puede deshacer y elimina todos los equipos asociados.</p>
+                <div id="selectDisciplinaStep">
+                    <p>Selecciona la disciplina que deseas eliminar:</p>
+                    <div class="mb-3">
+                        <select class="form-select" id="disciplinaAEliminar">
+                            <option value="" disabled selected>Seleccionar disciplina...</option>
+                        </select>
+                    </div>
+                </div>
                 
-                <div class="mb-3">
-                    <label for="confirmDisciplinaPassword" class="form-label">Ingresa tu contraseña para confirmar:</label>
-                    <input type="password" class="form-control" id="confirmDisciplinaPassword">
+                <div id="confirmDisciplinaStep" style="display: none;">
+                    <p>¿Estás seguro de que deseas eliminar la disciplina <span id="deleteDisciplinaName" class="fw-bold"></span>?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Advertencia:</strong> Esta acción eliminará:
+                        <ul class="mb-0 mt-2">
+                            <li>La disciplina seleccionada</li>
+                            <li>Todos los equipos registrados en esta disciplina</li>
+                            <li>Todos los partidos asociados a esta disciplina</li>
+                        </ul>
+                    </div>
+                    <p class="text-danger"><strong>Esta acción no se puede deshacer.</strong></p>
+                    
+                    <div class="mb-3">
+                        <label for="confirmDisciplinaPassword" class="form-label">Ingresa tu contraseña para confirmar:</label>
+                        <input type="password" class="form-control" id="confirmDisciplinaPassword">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteDisciplinaBtn">Eliminar</button>
+                <button type="button" class="btn btn-primary" id="nextStepBtn" style="display: none;">Continuar</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteDisciplinaBtn" style="display: none;">Eliminar</button>
             </div>
         </div>
     </div>
@@ -924,6 +947,120 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Mostrar modal para seleccionar disciplina a eliminar
+    function mostrarModalEliminarDisciplina() {
+        // Cargar disciplinas en el select
+        fetch('/usuarios/api/disciplinas/')
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('disciplinaAEliminar');
+                select.innerHTML = '<option value="" disabled selected>Seleccionar disciplina...</option>';
+                
+                data.forEach(disciplina => {
+                    const option = document.createElement('option');
+                    option.value = disciplina.id;
+                    option.textContent = disciplina.nombre;
+                    select.appendChild(option);
+                });
+                
+                // Resetear modal a paso inicial
+                document.getElementById('selectDisciplinaStep').style.display = 'block';
+                document.getElementById('confirmDisciplinaStep').style.display = 'none';
+                document.getElementById('nextStepBtn').style.display = 'inline-block';
+                document.getElementById('confirmDeleteDisciplinaBtn').style.display = 'none';
+                document.getElementById('confirmDisciplinaPassword').value = '';
+                
+                // Mostrar modal
+                const modal = new bootstrap.Modal(document.getElementById('deleteDisciplinaModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error al cargar disciplinas:', error);
+                alert('Error al cargar las disciplinas');
+            });
+    }
+
+    // Continuar al paso de confirmación
+    function continuarEliminacionDisciplina() {
+        const disciplinaId = document.getElementById('disciplinaAEliminar').value;
+        const disciplinaNombre = document.getElementById('disciplinaAEliminar').options[document.getElementById('disciplinaAEliminar').selectedIndex].text;
+        
+        if (!disciplinaId) {
+            alert('Debes seleccionar una disciplina');
+            return;
+        }
+        
+        // Guardar ID de disciplina a eliminar
+        currentDeletingDisciplinaId = disciplinaId;
+        
+        // Actualizar nombre en el texto de confirmación
+        document.getElementById('deleteDisciplinaName').textContent = disciplinaNombre;
+        
+        // Cambiar al paso de confirmación
+        document.getElementById('selectDisciplinaStep').style.display = 'none';
+        document.getElementById('confirmDisciplinaStep').style.display = 'block';
+        document.getElementById('nextStepBtn').style.display = 'none';
+        document.getElementById('confirmDeleteDisciplinaBtn').style.display = 'inline-block';
+    }
+
+    // Eliminar disciplina
+    function eliminarDisciplina(event) {
+        event.preventDefault();
+        
+        const password = document.getElementById('confirmDisciplinaPassword').value;
+        
+        if (!password) {
+            alert('Debes ingresar tu contraseña para confirmar');
+            return;
+        }
+        
+        if (!currentDeletingDisciplinaId) {
+            alert('Error: No se ha seleccionado ninguna disciplina');
+            return;
+        }
+        
+        fetch(`/usuarios/api/disciplinas/${currentDeletingDisciplinaId}/`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                admin_password: password
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Error al eliminar la disciplina');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Limpiar campos
+            document.getElementById('confirmDisciplinaPassword').value = '';
+            currentDeletingDisciplinaId = null;
+            
+            // Cerrar modal
+            bootstrap.Modal.getInstance(document.getElementById('deleteDisciplinaModal')).hide();
+            
+            // Mostrar mensaje de éxito
+            document.getElementById('teamsMessage').innerHTML = '<div class="alert alert-success">Disciplina eliminada correctamente</div>';
+            
+            // Recargar página para actualizar las pestañas
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        })
+        .catch(error => {
+            console.error('Error al eliminar disciplina:', error);
+            // Limpiar el campo de contraseña incluso en caso de error
+            document.getElementById('confirmDisciplinaPassword').value = '';
+            alert('Error: ' + error.message);
+        });
+    }
+
     // Preparar formulario para crear una nueva disciplina
     function prepararNuevaDisciplina() {
         document.getElementById('addEditDisciplinaModalLabel').textContent = 'Nueva Disciplina';
@@ -1159,9 +1296,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Botón para agregar nuevo equipo
     document.getElementById('addTeamBtn')?.addEventListener('click', prepararNuevoEquipo);
-    
-    // Botón para agregar nueva disciplina
+      // Botón para agregar nueva disciplina
     document.getElementById('addDisciplinaBtn')?.addEventListener('click', prepararNuevaDisciplina);
+    
+    // Botón para eliminar disciplina
+    document.getElementById('deleteDisciplinaBtn')?.addEventListener('click', mostrarModalEliminarDisciplina);
+    
+    // Botón para continuar con eliminación de disciplina
+    document.getElementById('nextStepBtn')?.addEventListener('click', continuarEliminacionDisciplina);
+    
+    // Botón para confirmar eliminación de disciplina
+    document.getElementById('confirmDeleteDisciplinaBtn')?.addEventListener('click', eliminarDisciplina);
     
     // Botón para guardar equipo
     document.getElementById('saveTeamBtn')?.addEventListener('click', guardarEquipo);
