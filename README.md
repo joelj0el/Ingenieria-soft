@@ -413,3 +413,66 @@ Si llegaste hasta aquí y el servidor está corriendo en `http://localhost:8000`
 4. Registrar resultados y ver los rankings en acción
 
 ¡Disfruta gestionando tus Juegos Olímpicos de Paz! 🏆
+
+---
+
+### 🗄️ Configuración de Base de Datos en SQL Server
+
+Si vas a usar **SQL Server** como base de datos (recomendado para producción), sigue estos pasos antes de ejecutar las migraciones:
+
+#### 1. Crear la base de datos en SQL Server
+
+Puedes usar SQL Server Management Studio (SSMS) o ejecutar el siguiente script en tu consola de SQL Server:
+
+```sql
+-- Crear la base de datos
+CREATE DATABASE OLIMPAZ1;
+GO
+
+-- (Opcional) Crear un usuario y asignarle permisos
+USE OLIMPAZ1;
+GO
+CREATE LOGIN olimpaz_user WITH PASSWORD = 'TuPasswordSegura123';
+CREATE USER olimpaz_user FOR LOGIN olimpaz_user;
+ALTER ROLE db_owner ADD MEMBER olimpaz_user;
+GO
+```
+
+#### 2. Instalar el driver de SQL Server para Python
+
+```bash
+pip install mssql-django
+pip install pyodbc
+```
+
+#### 3. Configurar la conexión en `settings.py` de Django
+
+En el archivo `Olimpaz/settings.py`, busca la sección `DATABASES` y reemplázala por:
+
+```python
+# Configuración para SQL Server
+DATABASES = {
+    'default': {
+        'ENGINE': 'mssql',
+        'NAME': 'OLIMPAZ1',
+        'USER': '',  # si usas conexión integrada
+        'PASSWORD': '', 
+        'HOST': 'localhost\\SQLEXPRESS',  # ← con doble backslash
+        'PORT': '',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'trusted_connection': 'yes',
+        },
+    }
+}
+```
+
+> **Nota:** Asegúrate de tener instalado el driver ODBC adecuado en tu sistema. Puedes descargarlo desde: https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server
+
+#### 4. Probar la conexión
+
+Una vez configurado, ejecuta:
+```bash
+python manage.py migrate
+```
+Si no hay errores, ¡la conexión está lista!
